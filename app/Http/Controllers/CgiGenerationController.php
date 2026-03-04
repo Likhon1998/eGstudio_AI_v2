@@ -139,12 +139,14 @@ public function updatePrompts(Request $request, $id)
     // Use specific inputs to ensure clear mapping
     $generation->image_prompt = $request->input('image_prompt');
     $generation->video_prompt = $request->input('video_prompt');
+    $generation->audio_prompt = $request->input('audio_prompt');
 
     if ($generation->save()) {
         return response()->json([
             'success' => true,
             'image_prompt' => $generation->image_prompt,
-            'video_prompt' => $generation->video_prompt
+            'video_prompt' => $generation->video_prompt,
+            'audio_prompt' => $generation->audio_prompt
         ]);
     }
 
@@ -258,10 +260,11 @@ public function updatePrompts(Request $request, $id)
 
 public function videoGallery()
 {
-    // Fetch only completed videos for the logged-in user
     $videos = CgiGeneration::where('user_id', Auth::id())
-        ->where('video_status', 'completed')
-        ->whereNotNull('video_url')
+        ->where(function($query) {
+            $query->whereNotNull('video_url')
+                  ->orWhereNotNull('branded_video_url');
+        })
         ->orderBy('created_at', 'desc')
         ->get();
 
@@ -270,10 +273,12 @@ public function videoGallery()
 
 public function imageGallery()
 {
-    // Fetch only completed image renders for the logged-in user
+    // Fetch generations that have either a standard image or a branded image
     $images = CgiGeneration::where('user_id', Auth::id())
-        ->where('image_status', 'completed')
-        ->whereNotNull('image_url')
+        ->where(function($query) {
+            $query->whereNotNull('image_url')
+                  ->orWhereNotNull('branded_image_url');
+        })
         ->orderBy('created_at', 'desc')
         ->get();
 
