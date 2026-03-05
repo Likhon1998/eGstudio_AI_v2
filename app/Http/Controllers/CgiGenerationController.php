@@ -157,58 +157,58 @@ public function updatePrompts(Request $request, $id)
      * Central Callback Handler.
      * Handles Stage 1 (Prompts) and Stage 2 (Image URL) at different times.
      */
-    public function callback(Request $request)
-{
-    $id = $request->input('id');
-    $generation = CgiGeneration::where('id', $id)->first();
+//     public function callback(Request $request)
+// {
+//     $id = $request->input('id');
+//     $generation = CgiGeneration::where('id', $id)->first();
 
-    if (!$generation) {
-        return response()->json(['error' => 'Record not found'], 404);
-    }
+//     if (!$generation) {
+//         return response()->json(['error' => 'Record not found'], 404);
+//     }
 
-    // PATH D: The Branding is FINISHED (New Logic)
-    if ($request->has('branded_image_url') || $request->has('branded_video_url')) {
-        $updateData = [];
-        if ($request->has('branded_image_url')) {
-            $updateData['branded_image_url'] = $request->input('branded_image_url');
-        }
-        if ($request->has('branded_video_url')) {
-            $updateData['branded_video_url'] = $request->input('branded_video_url');
-        }
+//     // PATH D: The Branding is FINISHED (New Logic)
+//     if ($request->has('branded_image_url') || $request->has('branded_video_url')) {
+//         $updateData = [];
+//         if ($request->has('branded_image_url')) {
+//             $updateData['branded_image_url'] = $request->input('branded_image_url');
+//         }
+//         if ($request->has('branded_video_url')) {
+//             $updateData['branded_video_url'] = $request->input('branded_video_url');
+//         }
         
-        $generation->update($updateData);
-        return response()->json(['status' => 'success', 'message' => 'Branded Media Saved']);
-    }
+//         $generation->update($updateData);
+//         return response()->json(['status' => 'success', 'message' => 'Branded Media Saved']);
+//     }
 
-    // PATH C: The Video Render is FINISHED (Existing Logic)
-    if ($request->has('video_url') && $request->video_url !== null) {
-        $generation->update([
-            'video_url'    => $request->input('video_url'),
-            'video_status' => 'completed' 
-        ]);
-        return response()->json(['status' => 'success', 'message' => 'Video Render Saved']);
-    }
+//     // PATH C: The Video Render is FINISHED (Existing Logic)
+//     if ($request->has('video_url') && $request->video_url !== null) {
+//         $generation->update([
+//             'video_url'    => $request->input('video_url'),
+//             'video_status' => 'completed' 
+//         ]);
+//         return response()->json(['status' => 'success', 'message' => 'Video Render Saved']);
+//     }
 
-    // PATH B: The 3D Render is FINISHED (Existing Logic)
-    if ($request->has('image_url') && $request->image_url !== null) {
-        $generation->update([
-            'image_url'    => $request->input('image_url'),
-            'image_status' => 'completed' 
-        ]);
-        return response()->json(['status' => 'success', 'message' => 'Image Render Saved']);
-    }
+//     // PATH B: The 3D Render is FINISHED (Existing Logic)
+//     if ($request->has('image_url') && $request->image_url !== null) {
+//         $generation->update([
+//             'image_url'    => $request->input('image_url'),
+//             'image_status' => 'completed' 
+//         ]);
+//         return response()->json(['status' => 'success', 'message' => 'Image Render Saved']);
+//     }
 
-    // PATH A: Initial Prompts arrived (Existing Logic)
-    $generation->update([
-        'status'          => 'completed',
-        'image_prompt'    => $request->input('image_prompt'), 
-        'video_prompt'    => $request->input('video_prompt'),
-        'audio_prompt'    => $request->input('audio_prompt'),
-        'negative_prompt' => $request->input('negative_prompt'),
-    ]);
+//     // PATH A: Initial Prompts arrived (Existing Logic)
+//     $generation->update([
+//         'status'          => 'completed',
+//         'image_prompt'    => $request->input('image_prompt'), 
+//         'video_prompt'    => $request->input('video_prompt'),
+//         'audio_prompt'    => $request->input('audio_prompt'),
+//         'negative_prompt' => $request->input('negative_prompt'),
+//     ]);
 
-    return response()->json(['status' => 'success', 'message' => 'AI Prompts Stored']);
-}
+//     return response()->json(['status' => 'success', 'message' => 'AI Prompts Stored']);
+// }
 
     public function destroy($id)
     {

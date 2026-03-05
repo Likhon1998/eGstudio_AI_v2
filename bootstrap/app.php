@@ -12,9 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // ALLOW n8n to post data to this specific URL
-        $middleware->validateCsrfTokens(except: [
-            'cgi/callback', 
-        ]);
+        // We commented this out because n8n now uses the Supabase Node directly!
+        // $middleware->validateCsrfTokens(except: [
+        //     'cgi/callback', 
+        // ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

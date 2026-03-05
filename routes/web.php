@@ -38,6 +38,6 @@ Route::middleware('auth')->group(function () {
 
 // --- NEW CALLBACK ROUTE ---        
 // We keep this outside the 'auth' group so n8n can reach it
-Route::post('/cgi/callback', [CgiGenerationController::class, 'callback'])->name('cgi.callback');
+// Route::post('/cgi/callback', [CgiGenerationController::class, 'callback'])->name('cgi.callback');
 
 require __DIR__.'/auth.php';

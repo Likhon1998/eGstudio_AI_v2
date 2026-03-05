@@ -15,7 +15,7 @@
 
     <aside class="w-64 bg-gray-900 border-r border-gray-800 hidden sm:flex sm:flex-col">
         <div class="h-16 flex items-center px-6 border-b border-gray-800">
-            <span class="text-2xl font-bold tracking-tighter text-white">eGStudio_<span
+            <span class="text-2xl font-bold tracking-tighter text-white">eGStudio<span
                     class="text-blue-500">AI</span></span>
         </div>
 
@@ -74,6 +74,15 @@
         </main>
 
     </div>
-</body>
 
+    {{-- Keep the Laravel session alive by pinging the server every 60 minutes --}}
+    <script>
+        setInterval(function() {
+            fetch('/up', { 
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).catch(() => console.log('Keep-alive ping failed'));
+        }, 1000 * 60 * 60); // 60 minutes
+    </script>
+</body>
 </html>

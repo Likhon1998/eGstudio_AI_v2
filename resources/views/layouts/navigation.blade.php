@@ -20,9 +20,9 @@
             
             <x-slot name="content">
                 <div class="bg-gray-800 border border-gray-700 rounded-md">
-                    <x-dropdown-link :href="route('profile.edit')" class="text-gray-300 hover:bg-gray-700 hover:text-white">
+                    {{-- <x-dropdown-link :href="route('profile.edit')" class="text-gray-300 hover:bg-gray-700 hover:text-white">
                         {{ __('Profile') }}
-                    </x-dropdown-link>
+                    </x-dropdown-link> --}}
 
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf

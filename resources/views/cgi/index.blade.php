@@ -35,7 +35,7 @@
     <div class="max-w-full mx-auto bg-[#050505] min-h-screen" x-data="{ brandingModal: false, activeGenId: null, activeImageUrl: '', activeVideoUrl: '', isUploadingLogo: false, activePreviewUrl: '' }">
         
         {{-- Slim Top Toolbar --}}
-        <div class="flex items-center justify-between px-8 py-4 border-b border-white/5 bg-[#0a0a0a]">
+        <div class="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/5 bg-[#0a0a0a]">
             <div>
                 <h1 class="text-[13px] font-black text-white tracking-[0.2em] uppercase flex items-center gap-3">
                     <span class="w-1 h-5 bg-blue-600 rounded-full shadow-[0_0_10px_rgba(37,99,235,0.5)]"></span>
@@ -44,22 +44,22 @@
                 <p class="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">Neural Asset Pipeline v3.2</p>
             </div>
             <a href="{{ route('cgi.create') }}"
-                class="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black rounded-md transition-all uppercase tracking-widest shadow-lg shadow-blue-600/20">
+                class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-black rounded-md transition-all uppercase tracking-widest shadow-lg shadow-blue-600/20">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
                 New Directive
             </a>
         </div>
 
-        <div class="p-8">
+        <div class="p-4 sm:p-6">
             <div class="bg-[#0a0a0a] border border-white/5 rounded-xl overflow-hidden shadow-2xl">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead class="bg-white/[0.02] border-b border-white/5">
-                            <tr class="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold">
-                                <th class="px-8 py-5">Directive Identity</th>
-                                <th class="px-8 py-5 text-center">Neural Prompts</th>
-                                <th class="px-8 py-5">Render Engine</th>
-                                <th class="px-8 py-5 text-right">Control</th>
+                            <tr class="text-[9px] uppercase tracking-[0.2em] text-gray-500 font-bold">
+                                <th class="px-4 sm:px-6 py-4">Directive Identity</th>
+                                <th class="px-4 sm:px-6 py-4 text-center">Neural Prompts</th>
+                                <th class="px-4 sm:px-6 py-4">Render Engine</th>
+                                <th class="px-4 sm:px-6 py-4 text-right w-16">Control</th>
                             </tr>
                         </thead>
 
@@ -173,32 +173,41 @@
                             class="hover:bg-white/[0.01] transition-colors"
                             >
 
-                                <td class="px-8 py-6">
-                                    <div class="flex flex-col">
-                                        <span class="text-[13px] font-black text-gray-100 uppercase tracking-wider">{{ $gen->product_name }}</span>
-                                        <span class="text-[10px] text-gray-500 mt-0.5 font-bold italic">{{ $gen->marketing_angle }}</span>
-                                        <span class="mt-2 text-[8px] font-black text-blue-500/80 uppercase tracking-[0.2em]">{{ $gen->visual_prop }}</span>
+                                <td class="px-4 sm:px-6 py-4 align-top w-1/4">
+                                    {{-- CLICKABLE DIRECTIVE IDENTITY (Triggers Details Modal) --}}
+                                    <div @click="openModal = 'details'" class="flex flex-col cursor-pointer group p-2 -mx-2 rounded-xl hover:bg-white/[0.03] border border-transparent hover:border-white/5 transition-all">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="text-xs font-black text-gray-100 uppercase tracking-wider leading-tight">{{ $gen->product_name }}</span>
+                                            {{-- Hover Eye Icon --}}
+                                            <svg class="w-3.5 h-3.5 text-gray-500 opacity-0 group-hover:opacity-100 group-hover:text-blue-400 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                            </svg>
+                                        </div>
+                                        <span class="text-[9px] text-gray-500 mt-0.5 font-bold italic line-clamp-1">{{ $gen->marketing_angle }}</span>
+                                        <span class="mt-1 text-[8px] font-black text-blue-500/80 uppercase tracking-[0.2em] line-clamp-1">{{ $gen->visual_prop }}</span>
                                     </div>
                                 </td>
 
-                                <td class="px-8 py-6 text-center">
-                                    <div class="flex items-center justify-center gap-1.5">
-                                        <button @click="openModal='image'; isEditing=false;" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-[9px] font-black text-gray-400 border border-white/5 rounded transition-all uppercase tracking-widest">Image Prompt</button>
-                                        <button @click="openModal='video'; isEditing=false;" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-[9px] font-black text-gray-400 border border-white/5 rounded transition-all uppercase tracking-widest">Video Prompt</button>
-                                        <button @click="openModal='audio'; isEditing=false;" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-[9px] font-black text-gray-400 border border-white/5 rounded transition-all uppercase tracking-widest">Audio Prompt</button>
+                                <td class="px-4 sm:px-6 py-4 text-center align-top">
+                                    <div class="flex items-center justify-center gap-1 flex-wrap">
+                                        <button @click="openModal='image'; isEditing=false;" class="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 text-[8px] font-black text-gray-400 border border-white/5 rounded transition-all uppercase tracking-widest">Image</button>
+                                        <button @click="openModal='video'; isEditing=false;" class="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 text-[8px] font-black text-gray-400 border border-white/5 rounded transition-all uppercase tracking-widest">Video</button>
+                                        <button @click="openModal='audio'; isEditing=false;" class="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 text-[8px] font-black text-gray-400 border border-white/5 rounded transition-all uppercase tracking-widest">Audio</button>
                                     </div>
                                 </td>
 
-                                <td class="px-8 py-6">
+                                <td class="px-4 sm:px-6 py-4 align-top">
                                     @if($gen->status == 'processing')
-                                        <div class="flex items-center gap-3 px-4 py-2 bg-yellow-500/5 border border-yellow-500/10 rounded-lg">
+                                        <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-500/5 border border-yellow-500/10 rounded-lg">
                                             <span class="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(234,179,8,0.6)]"></span>
-                                            <span class="text-[9px] font-black text-yellow-500 uppercase tracking-widest">Generating DNA</span>
+                                            <span class="text-[8px] font-black text-yellow-500 uppercase tracking-widest">Generating DNA</span>
                                         </div>
                                     @else
-                                        <div class="flex items-center gap-3">
+                                        {{-- ADDED FLEX-WRAP TO PREVENT HORIZONTAL SCROLLING --}}
+                                        <div class="flex flex-wrap items-center gap-2">
                                             <button @click="imageUrl ? (openModal='preview', activePreviewUrl=imageUrl) : triggerMakePicture()" :disabled="imageStatus==='making' || isTriggering"
-                                                class="h-9 px-5 text-[10px] font-black rounded transition-all uppercase tracking-widest flex items-center gap-2 border shadow-lg"
+                                                class="h-8 px-3 text-[9px] font-black rounded transition-all uppercase tracking-widest flex items-center gap-1.5 border shadow-lg"
                                                 :class="{
                                                     'bg-emerald-500 border-emerald-500 text-black animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.4)]': imageStatus === 'making' && !imageUrl,
                                                     'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white': imageUrl,
@@ -208,7 +217,7 @@
                                             </button>
 
                                             <button @click="videoUrl ? (openModal='videoPreview', activePreviewUrl=videoUrl) : triggerMakeVideo()" :disabled="videoStatus==='making' || isVideoTriggering || !imageUrl"
-                                                class="h-9 px-5 text-[10px] font-black rounded transition-all uppercase tracking-widest flex items-center gap-2 border disabled:opacity-10 shadow-lg"
+                                                class="h-8 px-3 text-[9px] font-black rounded transition-all uppercase tracking-widest flex items-center gap-1.5 border disabled:opacity-10 shadow-lg"
                                                 :class="{
                                                     'bg-pink-500 border-pink-500 text-black animate-pulse shadow-[0_0_15px_rgba(236,72,153,0.4)]': videoStatus === 'making' && !videoUrl,
                                                     'bg-pink-500/10 border-pink-500/20 text-pink-400 hover:bg-pink-500 hover:text-white shadow-pink-500/10': videoUrl,
@@ -219,31 +228,31 @@
 
                                             <template x-if="imageUrl && videoUrl && (!brandedImageUrl || !brandedVideoUrl) && !isBranding">
                                                 <button @click="brandingModal = true; activeGenId = '{{ $gen->id }}'; activeImageUrl = imageUrl; activeVideoUrl = videoUrl;" 
-                                                    class="h-9 px-5 bg-white/5 border border-white/10 hover:border-blue-500/50 text-gray-400 hover:text-blue-400 rounded transition-all uppercase tracking-widest text-[9px] font-black flex items-center gap-2 shadow-lg">
+                                                    class="h-8 px-3 bg-white/5 border border-white/10 hover:border-blue-500/50 text-gray-400 hover:text-blue-400 rounded transition-all uppercase tracking-widest text-[9px] font-black flex items-center gap-1.5 shadow-lg">
                                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                                     Add Logo
                                                 </button>
                                             </template>
 
                                             <template x-if="isBranding && (!brandedImageUrl || !brandedVideoUrl)">
-                                                <button disabled class="h-9 px-5 bg-blue-600 border border-blue-500 text-white rounded transition-all uppercase tracking-widest text-[9px] font-black flex items-center gap-2 shadow-lg animate-pulse shadow-[0_0_15px_rgba(37,99,235,0.4)]">
+                                                <button disabled class="h-8 px-3 bg-blue-600 border border-blue-500 text-white rounded transition-all uppercase tracking-widest text-[9px] font-black flex items-center gap-1.5 shadow-lg animate-pulse shadow-[0_0_15px_rgba(37,99,235,0.4)]">
                                                     BRANDING...
                                                 </button>
                                             </template>
 
                                             <template x-if="brandedImageUrl && brandedVideoUrl">
-                                                <div class="flex items-center gap-3">
-                                                    <button @click="openModal='brandedPreview'" class="h-9 px-5 bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded transition-all uppercase tracking-widest text-[9px] font-black shadow-lg">
+                                                <div class="flex items-center gap-2 flex-wrap">
+                                                    <button @click="openModal='brandedPreview'" class="h-8 px-3 bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded transition-all uppercase tracking-widest text-[9px] font-black shadow-lg">
                                                         Branded Pic
                                                     </button>
-                                                    <button @click="openModal='brandedVideoPreview'" class="h-9 px-5 bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-600 hover:text-white rounded transition-all uppercase tracking-widest text-[9px] font-black shadow-lg">
+                                                    <button @click="openModal='brandedVideoPreview'" class="h-8 px-3 bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-600 hover:text-white rounded transition-all uppercase tracking-widest text-[9px] font-black shadow-lg">
                                                         Branded Video
                                                     </button>
                                                 </div>
                                             </template>
 
                                             <button 
-                                                class="h-9 px-5 text-[10px] font-black rounded transition-all uppercase tracking-widest flex items-center gap-2 border bg-indigo-600/10 border-indigo-600/20 text-indigo-400 hover:bg-indigo-600 hover:text-white shadow-lg shadow-indigo-900/10"
+                                                class="h-8 px-3 text-[9px] font-black rounded transition-all uppercase tracking-widest flex items-center gap-1.5 border bg-indigo-600/10 border-indigo-600/20 text-indigo-400 hover:bg-indigo-600 hover:text-white shadow-lg shadow-indigo-900/10"
                                                 @click="$dispatch('notify', { message: 'Social Media Integrations Coming Soon', type: 'info' })">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
                                                 Post Assets
@@ -252,7 +261,55 @@
                                     @endif
 
                                     <template x-teleport="body">
-                                        <div x-show="openModal" class="fixed inset-0 z-[999] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md" x-cloak>
+                                        <div x-show="openModal" class="fixed inset-0 z-[999] flex items-center justify-center p-4 sm:p-6 bg-black/95 backdrop-blur-md" x-cloak>
+                                            
+                                            {{-- DETAILS MODAL (New User Settings View) --}}
+                                            <div x-show="openModal === 'details'" class="bg-[#0a0a0a] border border-white/10 w-full max-w-3xl rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200" @click.away="openModal = null">
+                                                <div class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                                                    <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Directive Configuration</h3>
+                                                    <button @click="openModal=null" class="text-gray-500 hover:text-white text-lg">✕</button>
+                                                </div>
+                                                <div class="p-8 grid grid-cols-1 sm:grid-cols-2 gap-8 bg-black/40">
+                                                    <div>
+                                                        <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">01. Product Identity</p>
+                                                        <p class="text-sm font-black text-white">{{ $gen->product_name }}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">02. Marketing Angle</p>
+                                                        <p class="text-xs font-bold text-gray-300 italic">{{ $gen->marketing_angle }}</p>
+                                                    </div>
+                                                    <div class="sm:col-span-2">
+                                                        <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-2">03. Visual Props</p>
+                                                        <div class="flex flex-wrap gap-1.5">
+                                                            @foreach(explode(',', $gen->visual_prop) as $prop)
+                                                                @if(trim($prop))
+                                                                    <span class="px-2 py-1 bg-white/5 border border-white/10 rounded text-[9px] font-bold text-gray-300 uppercase">{{ trim($prop) }}</span>
+                                                                @endif
+                                                            @endforeach
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">04. Atmosphere</p>
+                                                        <p class="text-xs font-bold text-gray-300">{{ $gen->atmosphere }}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">05. Camera Motion</p>
+                                                        <p class="text-xs font-bold text-gray-300">{{ $gen->camera_motion }}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">06. Composition</p>
+                                                        <p class="text-xs font-bold text-gray-300">{{ $gen->composition }}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">07. Lighting Style</p>
+                                                        <p class="text-xs font-bold text-gray-300">{{ $gen->lighting_style }}</p>
+                                                    </div>
+                                                </div>
+                                                <div class="px-8 py-5 border-t border-white/5 bg-white/[0.01] flex justify-end">
+                                                    <button @click="openModal=null" class="px-5 py-2.5 bg-gray-800 text-white rounded text-[10px] font-black uppercase tracking-widest hover:bg-gray-700 transition-colors">Close View</button>
+                                                </div>
+                                            </div>
+
                                             <div x-show="['image','video','audio'].includes(openModal)" class="bg-[#0a0a0a] border border-white/10 w-full max-w-xl rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
                                                 <div class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
                                                     <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]" x-text="openModal.toUpperCase() + ' DIRECTIVE DEFINITION'"></h3>
@@ -300,11 +357,11 @@
                                     </template>
                                 </td>
 
-                                <td class="px-8 py-6 text-right">
+                                <td class="px-4 sm:px-6 py-4 text-right align-top w-16">
                                     <form action="{{ route('cgi.destroy', $gen->id) }}" method="POST" onsubmit="return confirm('Purge directive and all associated assets?');">
                                         @csrf @method('DELETE')
-                                        <button type="submit" class="group flex items-center justify-center h-9 w-9 bg-white/5 border border-white/10 hover:bg-red-500/10 hover:border-red-500/30 rounded transition-all ml-auto">
-                                            <svg class="w-4 h-4 text-gray-500 group-hover:text-red-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <button type="submit" class="group flex items-center justify-center h-8 w-8 bg-white/5 border border-white/10 hover:bg-red-500/10 hover:border-red-500/30 rounded transition-all ml-auto">
+                                            <svg class="w-3.5 h-3.5 text-gray-500 group-hover:text-red-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                             </svg>
                                         </button>

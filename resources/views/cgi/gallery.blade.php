@@ -123,10 +123,14 @@
             {{-- Video Player Modal --}}
             <template x-teleport="body">
                 <div x-show="openModal" class="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-black/95 backdrop-blur-2xl" x-cloak>
-                    <div class="relative w-full max-w-5xl" @click.away="openModal = false">
-                        <button @click="openModal = false" class="absolute -top-12 right-0 text-white font-black hover:text-pink-500 uppercase text-[10px] tracking-[0.2em]">Close ✕</button>
+                    {{-- Notice: added currentVideo = '' to @click.away so it clears the source! --}}
+                    <div class="relative w-full max-w-5xl" @click.away="openModal = false; currentVideo = '';">
+                        <button @click="openModal = false; currentVideo = '';" class="absolute -top-12 right-0 text-white font-black hover:text-pink-500 uppercase text-[10px] tracking-[0.2em]">Close ✕</button>
                         <div class="bg-black rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
-                            <video :src="currentVideo" class="w-full max-h-[80vh]" controls autoplay loop playsinline></video>
+                            {{-- By wrapping in x-if, Alpine destroys the video when the modal closes --}}
+                            <template x-if="openModal">
+                                <video :src="currentVideo" class="w-full max-h-[80vh]" controls autoplay loop playsinline></video>
+                            </template>
                         </div>
                     </div>
                 </div>

@@ -104,7 +104,7 @@
         {{-- 3. FOOTER / BRANDING --}}
         <div class="flex items-center justify-between pt-6 border-t border-white/5">
             <div class="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
-                <p class="text-[9px] font-bold uppercase tracking-[0.4em] text-gray-500">
+                <p class="text-[9px] font-bold  tracking-[0.4em] text-gray-500">
                     Powered by <span class="text-blue-500">egeneration</span>
                 </p>
             </div>
