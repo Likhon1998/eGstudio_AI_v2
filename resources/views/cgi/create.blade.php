@@ -36,7 +36,7 @@
                     {{-- 01. The Product --}}
                     <div x-data="{ val: '' }">
                         <div class="flex items-center gap-2 mb-2 relative group w-fit">
-                            <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">01. What are we selling?</label>
+                            <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">01. What are you selling?</label>
                             <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             </div>
@@ -72,7 +72,7 @@
                         }
                     }">
                         <div class="flex items-center gap-2 mb-2 relative group w-fit">
-                            <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">02. Text You Want To See</label>
+                            <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">02. Text You Want To See !</label>
                             <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             </div>
@@ -109,7 +109,7 @@
                         <input type="hidden" name="visual_prop" :value="selectedProps.join(', ')">
 
                         <div class="flex items-center gap-2 mb-2 relative group w-fit">
-                            <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">03. Objects next to product</label>
+                            <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">03. Objects next to product.</label>
                             <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             </div>
@@ -149,7 +149,7 @@
                         {{-- 04. Background --}}
                         <div x-data="{ val: '' }">
                             <div class="flex items-center gap-2 mb-2 relative group w-fit">
-                                <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">04. Scene Background</label>
+                                <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">04. Scene Background.</label>
                                 <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 </div>
@@ -180,7 +180,7 @@
                         {{-- 05. Movement --}}
                         <div x-data="{ val: '' }">
                             <div class="flex items-center gap-2 mb-2 relative group w-fit">
-                                <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">05. Camera Style</label>
+                                <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">05. Camera Style.</label>
                                 <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 </div>
@@ -213,7 +213,7 @@
                     {{-- 06. Layout --}}
                     <div class="md:col-span-1" x-data="{ comp: '' }">
                         <div class="flex items-center gap-2 mb-2 relative group w-fit">
-                            <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">06. Where to put the product?</label>
+                            <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">06. Product Possitioning?</label>
                             <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             </div>
@@ -268,7 +268,7 @@
                     {{-- 07. Lighting --}}
                     <div class="md:col-span-1" x-data="{ light: '' }">
                         <div class="flex items-center gap-2 mb-2 relative group w-fit">
-                            <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">07. Lighting & Colors</label>
+                            <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">07. Lighting & Color preference.</label>
                             <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             </div>
