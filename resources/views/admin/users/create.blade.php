@@ -63,18 +63,23 @@
                         <div>
                             <h3 class="text-[10px] font-black text-purple-500 uppercase tracking-[0.2em] border-b border-white/5 pb-2 mb-4">Clearance Level</h3>
                             
-                            <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">Assigned Spatie Role</label>
+                            {{-- Changed label text to reflect it's no longer a Spatie role --}}
+                            <label class="block text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">Assigned System Role</label>
+                            
                             <select name="role_name" required 
                                 class="w-full bg-black border border-white/10 rounded px-4 py-2.5 text-xs text-white focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none cursor-pointer uppercase font-mono tracking-tighter">
                                 <option value="" disabled selected>-- Select Role --</option>
-                                @foreach($roles as $role)
-                                    <option value="{{ $role->name }}" class="bg-[#0d0d0d]">{{ strtoupper($role->name) }}</option>
+                                
+                                {{-- Updated variable from $roles to $userRoles and removed ->name property --}}
+                                @foreach($userRoles as $role)
+                                    <option value="{{ $role }}" class="bg-[#0d0d0d]">{{ strtoupper($role) }}</option>
                                 @endforeach
+                                
                             </select>
                             
                             <div class="mt-4 p-3 bg-white/[0.02] border border-white/5 rounded">
                                 <p class="text-[9px] text-gray-600 leading-relaxed italic">
-                                    Selecting a role will automatically inherit all pre-configured permissions for that access group.
+                                    Selecting a role will assign the respective clearance level to this access group.
                                 </p>
                             </div>
                             @error('role_name') <p class="text-[9px] text-red-500 mt-1 uppercase font-bold">{{ $message }}</p> @enderror
