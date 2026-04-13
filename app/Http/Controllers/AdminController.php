@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Carbon\Carbon;
-use Illuminate\Support\Str;
+use Illuminate\Support\Str; // <-- Added to generate unique Invoice Numbers
 
 class AdminController extends Controller
 {
@@ -50,11 +50,8 @@ class AdminController extends Controller
             abort(403, 'Unauthorized Access.');
         }
 
-        // Fetch distinct, non-null roles directly from the user table column
-        $userRoles = User::select('role')->distinct()->whereNotNull('role')->pluck('role');
-
-        // Pass the roles to the blade view
-        return view('admin.users.create', compact('userRoles'));
+        $roles = Role::all();
+        return view('admin.users.create', compact('roles'));
     }
 
     public function storeUser(Request $request)
@@ -67,17 +64,17 @@ class AdminController extends Controller
             'name'      => 'required|string|max:255',
             'email'     => 'required|string|email|max:255|unique:users',
             'password'  => 'required|string|min:8',
-            // Validating as string since it's pulling from the users table now, not the Spatie roles table
-            'role_name' => 'required|string' 
+            'role_name' => 'required|exists:roles,name'
         ]);
 
         $user = User::create([
             'name'     => $request->name,
             'email'    => $request->email,
             'password' => Hash::make($request->password),
-            // Assigning the role directly to the column dynamically instead of hardcoding 'user'
-            'role'     => $request->role_name, 
+            'role'     => 'user', 
         ]);
+
+        $user->assignRole($request->role_name);
 
         return redirect()->route('dashboard')->with('success', "Agent {$user->name} provisioned with '{$request->role_name}' clearance.");
     }
