@@ -3,7 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\URL; // Import the URL facade
+use Illuminate\Support\Facades\Gate; // 1. YOU MUST IMPORT THIS
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,10 +19,18 @@ class AppServiceProvider extends ServiceProvider
      * Bootstrap any application services.
      */
     public function boot(): void
-{
-    // Checks for 'ngrok-free' which covers both .app and .dev domains
-    if (str_contains(request()->header('host'), 'ngrok-free')) {
-        URL::forceScheme('https');
+    {
+        // 2. THE MASTER OVERRIDE
+        // This intercepts every single @can() and $user->can() check in the entire system.
+        Gate::before(function ($user, $ability) {
+            
+            // If the user's database column role is 'admin', instantly grant access.
+            if ($user->role === 'admin') {
+                return true;
+            }
+
+            // If they are not an admin, return null so Spatie can do its normal checks.
+            return null;
+        });
     }
-}
 }

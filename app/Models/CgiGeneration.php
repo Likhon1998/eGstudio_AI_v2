@@ -16,6 +16,7 @@ class CgiGeneration extends Model
         'id', 
         'user_id', 
         'product_name', 
+        'product_image',
         'marketing_angle', 
         'visual_prop', 
         'atmosphere', 
@@ -38,5 +39,13 @@ class CgiGeneration extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Relationship: A generation can have many social posts.
+     */
+    public function socialPosts()
+    {
+        return $this->hasMany(CgiSocialPost::class, 'cgi_generation_id');
     }
 }
