@@ -129,7 +129,16 @@
                         <button @click="deleteModal = false" type="button" class="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white text-[10px] font-black rounded-lg uppercase tracking-widest transition-colors">
                             Cancel
                         </button>
-                        <button @click="formToSubmit.submit()" type="button" class="flex-1 py-3 bg-red-600/20 hover:bg-red-600 border border-red-500/50 text-red-500 hover:text-white text-[10px] font-black rounded-lg uppercase tracking-widest transition-all">
+                        <button 
+                            @click="
+                                let button = $event.target;
+                                button.disabled = true;
+                                button.innerHTML = 'Deleting...';
+                                formToSubmit.submit();
+                            " 
+                            type="button" 
+                            class="flex-1 py-3 bg-red-600/20 hover:bg-red-600 border border-red-500/50 text-red-500 hover:text-white text-[10px] font-black rounded-lg uppercase tracking-widest transition-all"
+                        >
                             Yes, Delete
                         </button>
                     </div>

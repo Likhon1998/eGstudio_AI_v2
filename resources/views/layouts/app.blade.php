@@ -168,6 +168,32 @@
             }).catch(() => console.log('Keep-alive ping failed'));
         }, 1000 * 60 * 60); // 60 minutes
     </script>
+
+    {{-- Global Loading Handler --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Handle all form submissions that don't have preventDefault() in their onsubmit
+            document.body.addEventListener('submit', function(e) {
+                if (!e.defaultPrevented) {
+                    window.dispatchEvent(new CustomEvent('loading'));
+                }
+            });
+
+            // Handle clicks on elements with data-loading attribute
+            document.body.addEventListener('click', function(e) {
+                if (e.target.matches('[data-loading]')) {
+                    window.dispatchEvent(new CustomEvent('loading'));
+                }
+            });
+
+            // When navigating back, browser might show the page from cache with the overlay visible
+            window.addEventListener('pageshow', function(event) {
+                if (event.persisted) {
+                    window.dispatchEvent(new CustomEvent('loading-done'));
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>

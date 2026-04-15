@@ -298,6 +298,15 @@
                     
                     <div class="pt-2">
                         <button type="submit" :disabled="isSubmitting" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-[0_0_20px_rgba(5,150,105,0.2)] transition-all flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span x-show="!isSubmitting">Submit for Verification</span>
+                            <span x-show="isSubmitting">
+                                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                                </svg>
+                                Processing...
+                            </span>
+                        </button>
                             <span x-text="isSubmitting ? 'UPLOADING PROOF...' : 'Upload & Submit for Verification'"></span>
                             <svg x-show="!isSubmitting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                             <svg x-show="isSubmitting" class="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -309,33 +318,39 @@
         </div>
 
         {{-- ========================================== --}}
-        {{-- MODAL 2: DELETE CONFIRMATION             --}}
+        {{-- MODAL 3: DELETE CONFIRMATION             --}}
         {{-- ========================================== --}}
         <div x-show="deleteModal" 
              x-cloak
-             class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
-            
-            <div class="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-red-500/20 rounded-xl w-full max-w-md shadow-2xl shadow-red-900/20"
-                 @click.away="deleteModal = false"
-                 x-show="deleteModal"
+             class="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
+            <div class="bg-gradient-to-t from-[#111] to-[#0a0a0a] border border-red-500/30 rounded-xl p-6 w-full max-w-md shadow-2xl shadow-red-500/10" 
+                 @click.away="deleteModal = false" 
+                 x-show="deleteModal" 
                  x-transition>
                 
-                <div class="p-8 text-center">
-                    <div class="w-16 h-16 bg-red-500/10 border border-red-500/20 rounded-full mx-auto flex items-center justify-center mb-5">
-                        <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                <div class="text-center">
+                    <div class="w-12 h-12 bg-red-500/10 border border-red-500/20 text-red-500 rounded-full mx-auto flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </div>
-
-                    <h3 class="text-xl font-black text-white uppercase tracking-widest mb-2">Are you sure?</h3>
-                    <p class="text-xs text-gray-500 font-bold uppercase tracking-widest mb-6">This action will permanently delete the billing record. This cannot be undone.</p>
-                    
-                    <div class="flex justify-center items-center gap-3">
-                        <button type="button" @click="deleteModal = false" class="px-6 py-3 bg-[#1f1f1f] hover:bg-white/5 border border-white/10 text-gray-300 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-all w-full">
-                            Cancel
-                        </button>
-                        <button type="button" @click="formToSubmit.submit()" class="px-6 py-3 bg-red-600 hover:bg-red-500 border border-red-500/50 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-all w-full shadow-lg shadow-red-600/20">
-                            Confirm Delete
-                        </button>
-                    </div>
+                    <h3 class="text-lg font-black text-white uppercase tracking-wider">Confirm Deletion</h3>
+                    <p class="text-xs text-gray-500 mt-1">This action is irreversible. Are you sure you want to proceed?</p>
+                </div>
+                
+                <div class="mt-6 flex justify-center gap-3">
+                    <button @click="deleteModal = false" type="button" class="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 text-[10px] font-black uppercase tracking-widest rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button 
+                        @click="
+                            formToSubmit.querySelector('button[type=submit]').disabled = true;
+                            formToSubmit.querySelector('button[type=submit]').innerHTML = 'Deleting...';
+                            formToSubmit.submit();
+                        " 
+                        type="button" 
+                        class="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-colors shadow-[0_0_20px_rgba(220,38,38,0.2)]"
+                    >
+                        Confirm & Delete
+                    </button>
                 </div>
             </div>
         </div>

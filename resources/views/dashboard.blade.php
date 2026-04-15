@@ -92,7 +92,7 @@
                 <div class="hidden lg:block w-px h-8 bg-white/10"></div>
                 <div class="bg-black border border-white/10 px-4 py-2 rounded-lg flex items-center justify-center min-w-[100px]">
                     <span id="live-clock" class="text-sm font-mono font-bold text-blue-400">
-                        {{ now()->format('H:i:s') }}
+                        {{ now('Asia/Dhaka')->format('h:i:s A') }}
                     </span>
                 </div>
             </div>
@@ -159,11 +159,11 @@
                     @else
                         <div class="flex items-center gap-3">
                             <p class="text-sm font-mono font-bold px-3 py-1 rounded border {{ now()->greaterThan($expiryDate) ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-gray-300 bg-white/5 border-white/10' }}">
-                                {{ $expiryDate->format('M d, Y - H:i') }}
+                                {{ \Carbon\Carbon::parse($expiryDate)->timezone('Asia/Dhaka')->format('M d, Y - h:i A') }}
                             </p>
                             @if(now()->lessThan($expiryDate))
                                 <span class="px-2.5 py-1 text-[9px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded uppercase tracking-widest shadow-sm">
-                                    {{ now()->diff($expiryDate)->format('%a Days, %h Hrs, %i Mins') }} Left
+                                    {{ \Carbon\Carbon::now()->timezone('Asia/Dhaka')->diffForHumans($expiryDate, ['parts' => 4, 'short' => true]) }}
                                 </span>
                             @endif
                         </div>
@@ -296,7 +296,7 @@
             const clock = document.getElementById('live-clock');
             if (!clock) return;
             const now = new Date();
-            clock.textContent = now.toLocaleTimeString('en-GB', { hour12: false });
+            clock.textContent = now.toLocaleTimeString('en-US', { hour12: true });
         }
         setInterval(updateClock, 1000);
     </script>

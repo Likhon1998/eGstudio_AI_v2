@@ -25,5 +25,30 @@
             <div class="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent pointer-events-none"></div>
             {{ $slot }}
         </div>
+
+        <x-loading-overlay />
+
+        {{-- Global Loading Handler --}}
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                document.body.addEventListener('submit', function(e) {
+                    if (!e.defaultPrevented) {
+                        window.dispatchEvent(new CustomEvent('loading'));
+                    }
+                });
+
+                document.body.addEventListener('click', function(e) {
+                    if (e.target.matches('[data-loading]')) {
+                        window.dispatchEvent(new CustomEvent('loading'));
+                    }
+                });
+
+                window.addEventListener('pageshow', function(event) {
+                    if (event.persisted) {
+                        window.dispatchEvent(new CustomEvent('loading-done'));
+                    }
+                });
+            });
+        </script>
     </body>
 </html>

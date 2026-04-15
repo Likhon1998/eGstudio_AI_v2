@@ -67,17 +67,17 @@ class PackageController extends Controller
             ->where('is_active_selection', 'true')
             ->first();
             
-        $baseDate = now();
+        $baseDate = now('Asia/Dhaka');
         if ($currentActive && $currentActive->expires_at && \Carbon\Carbon::parse($currentActive->expires_at)->isFuture()) {
-            $baseDate = \Carbon\Carbon::parse($currentActive->expires_at);
+            $baseDate = \Carbon\Carbon::parse($currentActive->expires_at, 'Asia/Dhaka');
         }
 
         $cycle = strtolower($package->billing_cycle ?? '');
         
         if (str_contains($cycle, 'month')) {
-            $expiry = $baseDate->copy()->addMonth();
+            $expiry = $baseDate->copy()->addMonths(1);
         } elseif (str_contains($cycle, 'year')) {
-            $expiry = $baseDate->copy()->addYear();
+            $expiry = $baseDate->copy()->addYears(1);
         } else {
             $expiry = now()->addYears(100); // Lifetime
         }
