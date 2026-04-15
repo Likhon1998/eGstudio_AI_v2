@@ -11,7 +11,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
-<body class="font-sans antialiased text-gray-100 bg-black flex h-screen overflow-hidden">
+<body class="font-sans antialiased text-gray-100 bg-black flex h-screen">
 
     {{-- SIDEBAR NAVIGATION --}}
     <aside class="w-64 bg-[#0a0a0a] border-r border-white/5 hidden sm:flex sm:flex-col shrink-0">
