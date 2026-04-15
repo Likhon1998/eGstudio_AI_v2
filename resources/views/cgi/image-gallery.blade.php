@@ -92,9 +92,11 @@
 
                         {{-- Branded Image Card --}}
                         @if($image->branded_image_url)
+                        @can('view_branded_assets')
                         <div x-show="filter === 'all' || filter === 'branded'" 
                              x-transition:enter="transition ease-out duration-300"
                              class="group bg-[#0a0a0a] border border-emerald-500/10 rounded-2xl overflow-hidden shadow-2xl transition-all hover:border-emerald-500/40">
+                             <!-- ... (rest of the card content) ... -->
                             <div class="relative aspect-square bg-black cursor-pointer overflow-hidden" 
                                 @click="openModal = true; currentImage = '{{ str_starts_with($image->branded_image_url, 'http') ? $image->branded_image_url : asset('storage/' . $image->branded_image_url) }}'; $dispatch('notify', {message: 'Enlarging Branded Still', type: 'info'})">
                                 <img src="{{ str_starts_with($image->branded_image_url, 'http') ? $image->branded_image_url : asset('storage/' . $image->branded_image_url) }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-500">
@@ -110,6 +112,7 @@
                                 </div>
                             </div>
                         </div>
+                        @endcan
                         @endif
 
                     @endforeach

@@ -70,11 +70,13 @@
                         
                         {{-- 1. Branded Video Card --}}
                         @if($video->branded_video_url)
+                        @can('view_branded_assets')
                         <div x-show="filter === 'all' || filter === 'branded'" 
                              x-transition:enter="transition ease-out duration-300"
                              x-transition:enter-start="opacity-0 transform scale-95"
                              x-transition:enter-end="opacity-100 transform scale-100"
                              class="group bg-[#0a0a0a] border border-blue-500/20 rounded-2xl overflow-hidden shadow-2xl transition-all hover:border-blue-500">
+                             <!-- ... (rest of video card content) ... -->
                             <div class="relative aspect-video bg-black cursor-pointer" @click="openModal=true; currentVideo='{{ str_starts_with($video->branded_video_url, 'http') ? $video->branded_video_url : asset('storage/' . $video->branded_video_url) }}'">
                                 <img src="{{ str_starts_with($video->branded_image_url, 'http') ? $video->branded_image_url : asset('storage/' . $video->branded_image_url) }}" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity">
                                 <div class="absolute inset-0 flex items-center justify-center">
@@ -90,6 +92,7 @@
                                 </div>
                             </div>
                         </div>
+                        @endcan
                         @endif
 
                         {{-- 2. Raw Video Card --}}

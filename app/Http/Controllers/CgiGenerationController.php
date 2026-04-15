@@ -392,11 +392,15 @@ class CgiGenerationController extends Controller
         $activeWallet = null;
         
         if ($user->role !== 'admin') {
+            if (!$user->can('apply_branding')) {
+                return response()->json(['success' => false, 'message' => 'Your security clearance does not allow neural branding.'], 403);
+            }
+
             $activeWallet = \App\Models\UserPackage::with('package')->where('user_id', $user->id)
                 ->where('is_active_selection', 'true')
                 ->where(function ($query) { $query->whereNull('expires_at')->orWhere('expires_at', '>', now()); })->first();
 
-            if (!$activeWallet || !$activeWallet->package || !$activeWallet->package->has_branding) {
+            if (!$activeWallet || !$activeWallet->package || $activeWallet->package->branding_allowance <= 0) {
                 return response()->json(['success' => false, 'message' => 'Your current package does not allow custom branding.'], 403);
             }
 

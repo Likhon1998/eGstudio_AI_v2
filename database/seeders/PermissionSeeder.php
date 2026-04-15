@@ -16,8 +16,9 @@ class PermissionSeeder extends Seeder
             'view_cgi_index',         // Can view the main index table of all directives
             'access_cgi_generator',   // Can see the "New Directive" creation page
             'generate_images',        // Can spend credits/API to make images
-            'generate_videos', 
-            'view_cgi_index',       // Can spend credits/API to make videos
+            'generate_videos',        // Can spend credits/API to make videos
+            'apply_branding',         // Can overlay logo on assets
+            'view_branded_assets',    // Can see branded versions of assets
             
             // --- IMAGE GALLERY ---
             'view_image_gallery',     // Can see the image gallery page
