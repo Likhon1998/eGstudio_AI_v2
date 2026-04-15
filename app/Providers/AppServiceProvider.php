@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate; // 1. YOU MUST IMPORT THIS
+use Illuminate\Support\Facades\URL; // 2. YOU MUST IMPORT THIS
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -32,5 +33,9 @@ class AppServiceProvider extends ServiceProvider
             // If they are not an admin, return null so Spatie can do its normal checks.
             return null;
         });
+
+        if (config('app.env') !== 'local') {
+            URL::forceScheme('https');
+        }
     }
 }
