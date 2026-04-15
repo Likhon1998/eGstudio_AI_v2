@@ -133,12 +133,12 @@
                                     inputVideo: @js($gen->video_prompt), 
                                     inputAudio: @js($gen->audio_prompt),
 
-                                    imageUrl: '{{ $gen->image_url }}', 
+                                    imageUrl: '{{ $gen->image_url ? (str_starts_with($gen->image_url, "http") ? $gen->image_url : asset("storage/" . $gen->image_url)) : "" }}', 
 
-                                    videoUrl: '{{ $gen->video_url }}',
+                                    videoUrl: '{{ $gen->video_url ? (str_starts_with($gen->video_url, "http") ? $gen->video_url : asset("storage/" . $gen->video_url)) : "" }}',
 
-                                    brandedImageUrl: '{{ $gen->branded_image_url ?? '' }}',
-                                    brandedVideoUrl: '{{ $gen->branded_video_url ?? '' }}',
+                                    brandedImageUrl: '{{ $gen->branded_image_url ? (str_starts_with($gen->branded_image_url, "http") ? $gen->branded_image_url : asset("storage/" . $gen->branded_image_url)) : "" }}',
+                                    brandedVideoUrl: '{{ $gen->branded_video_url ? (str_starts_with($gen->branded_video_url, "http") ? $gen->branded_video_url : asset("storage/" . $gen->branded_video_url)) : "" }}',
                                     isBranding: ('{{ $gen->branded_image_url ?? '' }}' !== '' && '{{ $gen->branded_video_url ?? '' }}' !== '') 
                                                 ? false 
                                                 : (sessionStorage.getItem('branding_{{ $gen->id }}') === 'true'),

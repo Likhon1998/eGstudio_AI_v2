@@ -75,8 +75,8 @@
                              x-transition:enter-start="opacity-0 transform scale-95"
                              x-transition:enter-end="opacity-100 transform scale-100"
                              class="group bg-[#0a0a0a] border border-blue-500/20 rounded-2xl overflow-hidden shadow-2xl transition-all hover:border-blue-500">
-                            <div class="relative aspect-video bg-black cursor-pointer" @click="openModal=true; currentVideo='{{ $video->branded_video_url }}'">
-                                <img src="{{ $video->branded_image_url }}" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity">
+                            <div class="relative aspect-video bg-black cursor-pointer" @click="openModal=true; currentVideo='{{ str_starts_with($video->branded_video_url, 'http') ? $video->branded_video_url : asset('storage/' . $video->branded_video_url) }}'">
+                                <img src="{{ str_starts_with($video->branded_image_url, 'http') ? $video->branded_image_url : asset('storage/' . $video->branded_image_url) }}" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity">
                                 <div class="absolute inset-0 flex items-center justify-center">
                                     <div class="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-2xl"><svg class="w-5 h-5 fill-current ml-1" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
                                 </div>
@@ -86,7 +86,7 @@
                                 <h3 class="text-[11px] font-black text-white uppercase truncate">{{ $video->product_name }}</h3>
                                 <div class="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
                                     <span class="text-[8px] text-blue-500 font-bold uppercase tracking-widest">Master Production</span>
-                                    <a href="{{ $video->branded_video_url }}" download @click.stop class="text-gray-600 hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></a>
+                                    <a href="{{ str_starts_with($video->branded_video_url, 'http') ? $video->branded_video_url : asset('storage/' . $video->branded_video_url) }}" download @click.stop class="text-gray-600 hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></a>
                                 </div>
                             </div>
                         </div>
@@ -99,8 +99,8 @@
                              x-transition:enter-start="opacity-0 transform scale-95"
                              x-transition:enter-end="opacity-100 transform scale-100"
                              class="group bg-[#0a0a0a] border border-pink-500/10 rounded-2xl overflow-hidden shadow-2xl transition-all hover:border-pink-500/40">
-                            <div class="relative aspect-video bg-black cursor-pointer" @click="openModal=true; currentVideo='{{ $video->video_url }}'">
-                                <img src="{{ $video->image_url }}" class="w-full h-full object-cover opacity-40 group-hover:opacity-100 transition-opacity">
+                            <div class="relative aspect-video bg-black cursor-pointer" @click="openModal=true; currentVideo='{{ str_starts_with($video->video_url, 'http') ? $video->video_url : asset('storage/' . $video->video_url) }}'">
+                                <img src="{{ str_starts_with($video->image_url, 'http') ? $video->image_url : asset('storage/' . $video->image_url) }}" class="w-full h-full object-cover opacity-40 group-hover:opacity-100 transition-opacity">
                                 <div class="absolute inset-0 flex items-center justify-center">
                                     <div class="w-12 h-12 bg-pink-600 text-white rounded-full flex items-center justify-center shadow-2xl"><svg class="w-5 h-5 fill-current ml-1" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
                                 </div>
@@ -110,7 +110,7 @@
                                 <h3 class="text-[11px] font-black text-white uppercase truncate">{{ $video->product_name }}</h3>
                                 <div class="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
                                     <span class="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Raw Render</span>
-                                    <a href="{{ $video->video_url }}" download @click.stop class="text-gray-600 hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></a>
+                                    <a href="{{ str_starts_with($video->video_url, 'http') ? $video->video_url : asset('storage/' . $video->video_url) }}" download @click.stop class="text-gray-600 hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></a>
                                 </div>
                             </div>
                         </div>

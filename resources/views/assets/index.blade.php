@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div class="max-w-7xl mx-auto py-10 px-6 antialiased">
+    <div class="max-w-7xl mx-auto py-10 px-6 antialiased" x-data="{ deleteModal: false, formToSubmit: null }">
         
         {{-- Header --}}
         <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-white/10 pb-6 mb-8">
@@ -80,7 +80,7 @@
                                     <a href="{{ route('assets.edit', $asset->id) }}" class="p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors shadow-lg">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                     </a>
-                                    <form action="{{ route('assets.destroy', $asset->id) }}" method="POST" onsubmit="return confirm('Delete this asset permanently?');">
+                                    <form action="{{ route('assets.destroy', $asset->id) }}" method="POST" @submit.prevent="formToSubmit = $event.target; deleteModal = true;">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="p-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors shadow-lg">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
@@ -103,5 +103,41 @@
                 </div>
             </div>
         </div>
+
+        {{-- DELETE CONFIRMATION MODAL --}}
+        <template x-teleport="body">
+            <div x-show="deleteModal" 
+                class="fixed inset-0 z-[2200] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl"
+                x-cloak>
+                <div class="bg-[#0a0a0a] border border-red-500/20 w-full max-w-md rounded-2xl p-8 shadow-[0_0_40px_rgba(239,68,68,0.1)] animate-in zoom-in duration-300"
+                    @click.away="deleteModal = false">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h2 class="text-white font-black uppercase tracking-[0.2em] text-sm text-red-500">Delete Asset</h2>
+                            <p class="text-gray-400 text-[9px] uppercase font-bold mt-1">Are you sure you want to delete this?</p>
+                        </div>
+                        <button @click="deleteModal = false" type="button"
+                            class="text-gray-600 hover:text-white transition-colors">✕</button>
+                    </div>
+                    
+                    <div class="text-gray-400 text-xs mb-8">
+                        This action will permanently delete the selected asset from your library. This cannot be undone.
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button @click="deleteModal = false" type="button" class="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white text-[10px] font-black rounded-lg uppercase tracking-widest transition-colors">
+                            Cancel
+                        </button>
+                        <button @click="formToSubmit.submit()" type="button" class="flex-1 py-3 bg-red-600/20 hover:bg-red-600 border border-red-500/50 text-red-500 hover:text-white text-[10px] font-black rounded-lg uppercase tracking-widest transition-all">
+                            Yes, Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
     </div>
+
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
 </x-app-layout>
