@@ -28,7 +28,15 @@ class AdminController extends Controller
 
             $user->expiry_date = null;
             
-            if ($latestPaidBill && $user->package && $latestPaidBill->paid_at) {
+            // Note: We should ideally use the actual user_packages expires_at since it accounts for carry-over duration
+            $activeWallet = \App\Models\UserPackage::where('user_id', $user->id)
+                ->where('is_active_selection', 'true')
+                ->first();
+                
+            if ($activeWallet && $activeWallet->expires_at) {
+                $user->expiry_date = Carbon::parse($activeWallet->expires_at);
+            } elseif ($latestPaidBill && $user->package && $latestPaidBill->paid_at) {
+                // Fallback to old behavior
                 $paidAt = Carbon::parse($latestPaidBill->paid_at);
                 
                 if ($user->package->billing_cycle === 'monthly') {
@@ -186,18 +194,30 @@ class AdminController extends Controller
         $client = \App\Models\User::findOrFail($userId);
         $package = \App\Models\Package::findOrFail($request->package_id);
 
-        // 2. Deactivate old packages for this user
+        // 2. Handle Old Packages & Calculate new Expiration
+        // If the user already has an active package, we should start counting the new duration
+        // from the END of their current package's expiration, so they don't lose time.
+        $currentActive = \App\Models\UserPackage::where('user_id', $client->id)
+            ->where('is_active_selection', 'true')
+            ->first();
+            
+        $baseDate = Carbon::now();
+        if ($currentActive && $currentActive->expires_at && Carbon::parse($currentActive->expires_at)->isFuture()) {
+            $baseDate = Carbon::parse($currentActive->expires_at);
+        }
+
+        // Deactivate old packages for this user
         \App\Models\UserPackage::where('user_id', $client->id)
             ->update(['is_active_selection' => 'false']);
 
-        // 3. AUTO-CALCULATE EXPIRATION based on Package's billing cycle
+        // 3. AUTO-CALCULATE EXPIRATION based on Package's billing cycle and baseDate
         $cycle = strtolower($package->billing_cycle ?? 'monthly');
         if (str_contains($cycle, 'year')) {
-            $expiresAt = Carbon::now()->addYear()->format('Y-m-d H:i:s');
+            $expiresAt = $baseDate->copy()->addYear()->format('Y-m-d H:i:s');
         } elseif (str_contains($cycle, 'lifetime')) {
             $expiresAt = null; // Infinite
         } else {
-            $expiresAt = Carbon::now()->addMonth()->format('Y-m-d H:i:s'); // Default Monthly
+            $expiresAt = $baseDate->copy()->addMonth()->format('Y-m-d H:i:s'); // Default Monthly
         }
 
         // 4. Create Active Wallet directly using _allowance columns
@@ -215,7 +235,16 @@ class AdminController extends Controller
             'expires_at'          => $expiresAt,
         ]);
 
-        $client->update(['package_id' => $package->id]);
+        $client->update([
+            'package_id' => $package->id,
+            'expiry_date' => $expiresAt,
+            // Automatically grant the credits to the user's balance
+            'directive_credits'   => \DB::raw('directive_credits + ' . ($package->directive_allowance ?? 0)),
+            'image_credits'       => \DB::raw('image_credits + ' . ($package->image_allowance ?? 0)),
+            'video_credits'       => \DB::raw('video_credits + ' . ($package->video_allowance ?? 0)),
+            'branding_credits'    => \DB::raw('branding_credits + ' . ($package->branding_allowance ?? 0)),
+            'social_post_credits' => \DB::raw('social_post_credits + ' . ($package->social_post_allowance ?? 0)),
+        ]);
 
         // 5. GENERATE THE PAID INVOICE AUTOMATICALLY
         \App\Models\Billing::create([

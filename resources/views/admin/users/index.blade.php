@@ -1,6 +1,6 @@
 <x-app-layout>
     {{-- Initialize Alpine.js state for the modal at the top level --}}
-    <div x-data="{ showTierModal: false, selectedUserId: null, selectedUserName: '' }" class="max-w-7xl mx-auto pt-6 pb-8 px-6 space-y-6 antialiased">
+    <div x-data="{ showTierModal: false, selectedUserId: null, selectedUserName: '', deleteModal: false, formToSubmit: null }" class="max-w-7xl mx-auto pt-6 pb-8 px-6 space-y-6 antialiased">
         
         {{-- Header Section --}}
         <div class="flex items-center justify-between border-b border-white/10 pb-6">
@@ -115,7 +115,9 @@
                                     <span class="text-[10px] font-mono {{ \Carbon\Carbon::parse($activeWallet->expires_at)->isPast() ? 'text-red-500' : 'text-gray-300' }}">
                                         {{ \Carbon\Carbon::parse($activeWallet->expires_at)->format('Y-m-d') }}
                                     </span>
-                                    <span class="text-[8px] text-gray-600 font-bold uppercase">{{ \Carbon\Carbon::parse($activeWallet->expires_at)->diffForHumans() }}</span>
+                                    <span class="text-[8px] text-gray-600 font-bold uppercase">
+                                        {{ \Carbon\Carbon::parse($activeWallet->expires_at)->isPast() ? 'Expired' : \Carbon\Carbon::parse($activeWallet->expires_at)->diffInDays(now()) . ' days left' }}
+                                    </span>
                                 </div>
                             @else
                                 <span class="text-[10px] font-mono text-gray-700">—</span>
@@ -157,7 +159,7 @@
 
                                 {{-- Delete Form --}}
                                 @if(auth()->id() !== $user->id)
-                                    <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Remove this agent permanently? This cannot be undone.');">
+                                    <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="inline-block" @submit.prevent="formToSubmit = $event.target; deleteModal = true;">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 hover:text-red-400 rounded transition-colors border border-transparent hover:border-red-500/30" title="Delete Agent">
@@ -230,6 +232,38 @@
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </template>
+
+        {{-- DELETE CONFIRMATION MODAL --}}
+        <template x-teleport="body">
+            <div x-show="deleteModal" 
+                class="fixed inset-0 z-[2200] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl"
+                x-cloak>
+                <div class="bg-[#0a0a0a] border border-red-500/20 w-full max-w-md rounded-2xl p-8 shadow-[0_0_40px_rgba(239,68,68,0.1)] animate-in zoom-in duration-300"
+                    @click.away="deleteModal = false">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h2 class="text-white font-black uppercase tracking-[0.2em] text-sm text-red-500">Purge Agent</h2>
+                            <p class="text-gray-400 text-[9px] uppercase font-bold mt-1">Are you sure you want to remove this user?</p>
+                        </div>
+                        <button @click="deleteModal = false" type="button"
+                            class="text-gray-600 hover:text-white transition-colors">✕</button>
+                    </div>
+                    
+                    <div class="text-gray-400 text-xs mb-8">
+                        This action will permanently delete this agent account and all associated system data. This cannot be undone.
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button @click="deleteModal = false" type="button" class="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white text-[10px] font-black rounded-lg uppercase tracking-widest transition-colors">
+                            Cancel
+                        </button>
+                        <button @click="formToSubmit.submit()" type="button" class="flex-1 py-3 bg-red-600/20 hover:bg-red-600 border border-red-500/50 text-red-500 hover:text-white text-[10px] font-black rounded-lg uppercase tracking-widest transition-all">
+                            Yes, Delete
+                        </button>
+                    </div>
                 </div>
             </div>
         </template>

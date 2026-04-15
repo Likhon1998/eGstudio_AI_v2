@@ -80,4 +80,16 @@ class BillingController extends Controller
 
         return back()->with('success', 'Payment proof submitted! The Admin is reviewing it now.');
     }
+
+    // Handles deleting a billing history record
+    public function destroy($id)
+    {
+        $billing = Billing::where('id', $id)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        $billing->delete();
+
+        return back()->with('success', 'Billing history record deleted successfully.');
+    }
 }

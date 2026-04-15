@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Billing;
+use App\Policies\BillingPolicy;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate; // 1. YOU MUST IMPORT THIS
 use Illuminate\Support\Facades\URL; // 2. YOU MUST IMPORT THIS
@@ -21,6 +23,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::policy(Billing::class, BillingPolicy::class);
+
         // 2. THE MASTER OVERRIDE
         // This intercepts every single @can() and $user->can() check in the entire system.
         Gate::before(function ($user, $ability) {

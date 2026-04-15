@@ -61,12 +61,23 @@ class PackageController extends Controller
         $package = $billing->package;
 
         // 2. Calculate the exact expiration date robustly (ignoring case sensitivity)
+        // If the user already has an active package, we should start counting the new duration
+        // from the END of their current package's expiration, so they don't lose time.
+        $currentActive = \App\Models\UserPackage::where('user_id', $user->id)
+            ->where('is_active_selection', 'true')
+            ->first();
+            
+        $baseDate = now();
+        if ($currentActive && $currentActive->expires_at && \Carbon\Carbon::parse($currentActive->expires_at)->isFuture()) {
+            $baseDate = \Carbon\Carbon::parse($currentActive->expires_at);
+        }
+
         $cycle = strtolower($package->billing_cycle ?? '');
         
         if (str_contains($cycle, 'month')) {
-            $expiry = now()->addMonth();
+            $expiry = $baseDate->copy()->addMonth();
         } elseif (str_contains($cycle, 'year')) {
-            $expiry = now()->addYear();
+            $expiry = $baseDate->copy()->addYear();
         } else {
             $expiry = now()->addYears(100); // Lifetime
         }

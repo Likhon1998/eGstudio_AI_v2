@@ -42,6 +42,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/pricing', [PricingController::class, 'index'])->name('pricing.index');
     Route::post('/pricing/select/{id}', [PricingController::class, 'selectPackage'])->name('pricing.select');
     Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');
+    Route::delete('/billing/{id}', [BillingController::class, 'destroy'])->name('billing.destroy');
     Route::get('/billing/{id}/invoice', [BillingController::class, 'invoice'])->name('billing.invoice');
     Route::post('/billing/{id}/proof', [BillingController::class, 'submitProof'])->name('billing.submitProof');
     Route::post('/billing/wallet/{id}/switch', [BillingController::class, 'switchWallet'])->name('billing.wallet.switch');

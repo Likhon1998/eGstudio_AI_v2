@@ -157,9 +157,16 @@
                     @if($expiryDate->diffInYears(now()) > 50)
                         <p class="text-sm font-mono font-bold text-blue-400 bg-blue-500/10 px-3 py-1 rounded border border-blue-500/20">LIFETIME_ACCESS</p>
                     @else
-                        <p class="text-sm font-mono font-bold px-3 py-1 rounded border {{ now()->greaterThan($expiryDate) ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-gray-300 bg-white/5 border-white/10' }}">
-                            {{ $expiryDate->format('M d, Y - H:i') }}
-                        </p>
+                        <div class="flex items-center gap-3">
+                            <p class="text-sm font-mono font-bold px-3 py-1 rounded border {{ now()->greaterThan($expiryDate) ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-gray-300 bg-white/5 border-white/10' }}">
+                                {{ $expiryDate->format('M d, Y - H:i') }}
+                            </p>
+                            @if(now()->lessThan($expiryDate))
+                                <span class="px-2.5 py-1 text-[9px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded uppercase tracking-widest shadow-sm">
+                                    {{ now()->diff($expiryDate)->format('%a Days, %h Hrs, %i Mins') }} Left
+                                </span>
+                            @endif
+                        </div>
                     @endif
                 @else
                     {{-- <a href="{{ route('pricing.index') }}" class="w-full md:w-auto px-6 py-3 bg-white hover:bg-gray-200 text-black text-[11px] font-black uppercase tracking-widest rounded-lg shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all text-center">

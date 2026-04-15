@@ -1,6 +1,6 @@
 <x-app-layout>
     {{-- Alpine state controls both modals now --}}
-    <div class="max-w-6xl mx-auto py-10 px-6" x-data="{ showHistory: false }">
+    <div class="max-w-6xl mx-auto py-10 px-6" x-data="{ showHistory: false, deleteModal: false, formToSubmit: null }">
         
         {{-- Success Notification --}}
         @if(session('success'))
@@ -215,9 +215,9 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 text-right flex justify-end gap-2 items-center">
-                                    <a href="{{ route('billing.invoice', $bill->id) }}" target="_blank" class="text-[10px] font-black text-blue-400 hover:text-blue-300 uppercase tracking-widest border border-blue-500/30 px-3 py-1.5 rounded transition-all whitespace-nowrap">
+                                    {{-- <a href="{{ route('billing.invoice', $bill->id) }}" target="_blank" class="text-[10px] font-black text-blue-400 hover:text-blue-300 uppercase tracking-widest border border-blue-500/30 px-3 py-1.5 rounded transition-all whitespace-nowrap">
                                         View Invoice
-                                    </a>
+                                    </a> --}}
                                     
                                     @if($bill->status === 'due')
                                         @if($bill->payment_proof)
@@ -232,6 +232,16 @@
                                             </button>
                                         @endif
                                     @endif
+
+                                    @can('delete', $bill)
+                                    <form action="{{ route('billing.destroy', $bill->id) }}" method="POST" class="inline" @submit.prevent="formToSubmit = $event.target; deleteModal = true;">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="button" @click="formToSubmit = $event.target.closest('form'); deleteModal = true;" class="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded border border-red-500/30 transition-colors" title="Delete Record">
+                                            <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        </button>
+                                    </form>
+                                    @endcan
                                 </td>
                             </tr>
                             @empty
@@ -269,7 +279,7 @@
                     </button>
                 </div>
                 
-                <form x-bind:action="'/billing/' + billId + '/proof'" method="POST" enctype="multipart/form-data" class="space-y-5">
+                <form x-bind:action="'/billing/' + billId + '/proof'" method="POST" enctype="multipart/form-data" class="space-y-5" x-data="{ isSubmitting: false }" @submit="isSubmitting = true">
                     @csrf
                     
                     <div>
@@ -287,13 +297,46 @@
                     </div>
                     
                     <div class="pt-2">
-                        <button type="submit" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-[0_0_20px_rgba(5,150,105,0.2)] transition-all flex justify-center items-center gap-2">
-                            Upload & Submit for Verification
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        <button type="submit" :disabled="isSubmitting" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-[0_0_20px_rgba(5,150,105,0.2)] transition-all flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span x-text="isSubmitting ? 'UPLOADING PROOF...' : 'Upload & Submit for Verification'"></span>
+                            <svg x-show="!isSubmitting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                            <svg x-show="isSubmitting" class="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                         </button>
                     </div>
                 </form>
                 
+            </div>
+        </div>
+
+        {{-- ========================================== --}}
+        {{-- MODAL 2: DELETE CONFIRMATION             --}}
+        {{-- ========================================== --}}
+        <div x-show="deleteModal" 
+             x-cloak
+             class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
+            
+            <div class="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-red-500/20 rounded-xl w-full max-w-md shadow-2xl shadow-red-900/20"
+                 @click.away="deleteModal = false"
+                 x-show="deleteModal"
+                 x-transition>
+                
+                <div class="p-8 text-center">
+                    <div class="w-16 h-16 bg-red-500/10 border border-red-500/20 rounded-full mx-auto flex items-center justify-center mb-5">
+                        <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </div>
+
+                    <h3 class="text-xl font-black text-white uppercase tracking-widest mb-2">Are you sure?</h3>
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-widest mb-6">This action will permanently delete the billing record. This cannot be undone.</p>
+                    
+                    <div class="flex justify-center items-center gap-3">
+                        <button type="button" @click="deleteModal = false" class="px-6 py-3 bg-[#1f1f1f] hover:bg-white/5 border border-white/10 text-gray-300 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-all w-full">
+                            Cancel
+                        </button>
+                        <button type="button" @click="formToSubmit.submit()" class="px-6 py-3 bg-red-600 hover:bg-red-500 border border-red-500/50 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-all w-full shadow-lg shadow-red-600/20">
+                            Confirm Delete
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
