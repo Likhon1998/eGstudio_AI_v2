@@ -36,27 +36,50 @@
                 <span>Dashboard</span>
             </a>
 
-            {{-- Asset Library (Protected by access_cgi_generator) --}}
-            @can('access_cgi_generator')
-                <a href="{{ route('assets.index') }}"
-                    class="{{ request()->routeIs('assets.*') ? 'bg-blue-600/10 text-blue-400 border-blue-500/20 shadow-lg' : 'text-gray-500 hover:bg-white/5 hover:text-gray-300 border-transparent' }} flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-[11px] font-bold uppercase tracking-widest">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                    </svg>
-                    <span>Asset Library</span>
-                </a>
-            @endcan
-
-            {{-- CGI Directive (Protected by access_cgi_generator) --}}
+            {{-- CGI Directive: Create New (Protected by access_cgi_generator) --}}
             @can('access_cgi_generator')
                 <a href="{{ route('cgi.create') }}"
                     class="{{ request()->routeIs('cgi.create') ? 'bg-blue-600/10 text-blue-400 border-blue-500/20 shadow-lg' : 'text-gray-500 hover:bg-white/5 hover:text-gray-300 border-transparent' }} flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-[11px] font-bold uppercase tracking-widest">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                     </svg>
-                    <span>CGI Directive</span>
+                    <span>New Directive</span>
                 </a>
+            @endcan
+
+            @can('view_cgi_index')
+                <a href="{{ route('cgi.index') }}"
+                    class="{{ request()->routeIs('cgi.index') ? 'bg-blue-600/10 text-blue-400 border-blue-500/20 shadow-lg' : 'text-gray-500 hover:bg-white/5 hover:text-gray-300 border-transparent' }} flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-[11px] font-bold uppercase tracking-widest">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
+                        </path>
+                    </svg>
+                    <span>Directive Studio</span>
+                </a>
+            @endcan
+            {{-- Asset Library (Protected by access_cgi_generator) --}}
+            @can('access_cgi_generator')
+                <a href="{{ route('assets.index') }}"
+                    class="{{ request()->routeIs('assets.*') ? 'bg-blue-600/10 text-blue-400 border-blue-500/20 shadow-lg' : 'text-gray-500 hover:bg-white/5 hover:text-gray-300 border-transparent' }} flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-[11px] font-bold uppercase tracking-widest">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                        </path>
+                    </svg>
+                    <span>Asset Library</span>
+                </a>
+
+                {{-- Logo/Brand Vault --}}
+                {{-- <a href="{{ route('logos.index') }}"
+                    class="{{ request()->routeIs('logos.*') ? 'bg-blue-600/10 text-blue-400 border-blue-500/20 shadow-lg' : 'text-gray-500 hover:bg-white/5 hover:text-gray-300 border-transparent' }} flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-[11px] font-bold uppercase tracking-widest">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01">
+                        </path>
+                    </svg>
+                    <span>Brand Vault</span>
+                </a> --}}
             @endcan
 
             {{-- Video Gallery (Protected by view_video_gallery) --}}
@@ -121,24 +144,32 @@
                     </svg>
                     <span>Monetization Plans</span>
                 </a>
-                
+
             @endif
-            
+
             {{-- SaaS Monetization Links --}}
             @can('subscribe_to_packages')
                 {{-- 1. Buy Packages Link --}}
-                <a href="{{ route('pricing.index') }}" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-[11px] font-bold uppercase tracking-widest {{ request()->routeIs('pricing') ? 'bg-blue-600/10 text-blue-400 border-blue-500/20 shadow-lg' : 'text-gray-500 hover:bg-white/5 hover:text-gray-300 border-transparent' }}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                <a href="{{ route('pricing.index') }}"
+                    class="flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-[11px] font-bold uppercase tracking-widest {{ request()->routeIs('pricing') ? 'bg-blue-600/10 text-blue-400 border-blue-500/20 shadow-lg' : 'text-gray-500 hover:bg-white/5 hover:text-gray-300 border-transparent' }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 10h18M7 15h1m4 0h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z">
+                        </path>
+                    </svg>
                     <span>Buy Credits</span>
                 </a>
             @endcan
 
             {{-- 2. User Billing/Invoice Dashboard Link --}}
             @can('view_billing')
-                <a href="{{ route('billing.index') }}" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-[11px] font-bold uppercase tracking-widest {{ request()->routeIs('billing.index') ? 'bg-emerald-600/10 text-emerald-400 border-emerald-500/20 shadow-lg' : 'text-gray-500 hover:bg-white/5 hover:text-gray-300 border-transparent' }}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <a href="{{ route('billing.index') }}"
+                    class="flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-[11px] font-bold uppercase tracking-widest {{ request()->routeIs('billing.index') ? 'bg-emerald-600/10 text-emerald-400 border-emerald-500/20 shadow-lg' : 'text-gray-500 hover:bg-white/5 hover:text-gray-300 border-transparent' }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
                     <span>My Subscription</span>
                 </a>
             @endcan
@@ -173,21 +204,21 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Handle all form submissions that don't have preventDefault() in their onsubmit
-            document.body.addEventListener('submit', function(e) {
+            document.body.addEventListener('submit', function (e) {
                 if (!e.defaultPrevented) {
                     window.dispatchEvent(new CustomEvent('loading'));
                 }
             });
 
             // Handle clicks on elements with data-loading attribute
-            document.body.addEventListener('click', function(e) {
+            document.body.addEventListener('click', function (e) {
                 if (e.target.matches('[data-loading]')) {
                     window.dispatchEvent(new CustomEvent('loading'));
                 }
             });
 
             // When navigating back, browser might show the page from cache with the overlay visible
-            window.addEventListener('pageshow', function(event) {
+            window.addEventListener('pageshow', function (event) {
                 if (event.persisted) {
                     window.dispatchEvent(new CustomEvent('loading-done'));
                 }

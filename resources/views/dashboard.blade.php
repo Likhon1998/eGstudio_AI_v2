@@ -32,6 +32,137 @@
             </div>
         @endif
 
+        {{-- NEW: NEURAL WALLET (CREDITS STATUS) AT THE VERY TOP --}}
+        @if($activeWallet && $activeWallet->package)
+            @php
+                // 1. Directives (Prompts)
+                $remDir = $activeWallet->directive_credits ?? 0;
+                $allowanceDir = max($activeWallet->package->directive_allowance ?? 0, $remDir);
+                $pctDir = $allowanceDir > 0 ? min(100, ($remDir / $allowanceDir) * 100) : 0;
+
+                // 2. Images
+                $remImg = $activeWallet->image_credits ?? 0;
+                $allowanceImg = max($activeWallet->package->image_allowance ?? 0, $remImg);
+                $pctImg = $allowanceImg > 0 ? min(100, ($remImg / $allowanceImg) * 100) : 0;
+
+                // 3. Videos
+                $remVid = $activeWallet->video_credits ?? 0;
+                $allowanceVid = max($activeWallet->package->video_allowance ?? 0, $remVid);
+                $pctVid = $allowanceVid > 0 ? min(100, ($remVid / $allowanceVid) * 100) : 0;
+
+                // 4. Brand Images (B_Images)
+                $remBImg = $activeWallet->branding_image_credits ?? 0;
+                $allowanceBImg = max($activeWallet->package->branding_image_allowance ?? $activeWallet->package->branding_image ?? 0, $remBImg);
+                $pctBImg = $allowanceBImg > 0 ? min(100, ($remBImg / $allowanceBImg) * 100) : 0;
+
+                // 5. Brand Videos (B_Videos)
+                $remBVid = $activeWallet->branding_video_credits ?? 0;
+                $allowanceBVid = max($activeWallet->package->branding_video_allowance ?? $activeWallet->package->branding_video ?? 0, $remBVid);
+                $pctBVid = $allowanceBVid > 0 ? min(100, ($remBVid / $allowanceBVid) * 100) : 0;
+
+                // 6. Social Post
+                $remSoc = $activeWallet->social_post_credits ?? 0;
+                $allowanceSoc = max($activeWallet->package->social_post_allowance ?? $activeWallet->package->social_allowance ?? $activeWallet->package->social_posts ?? 0, $remSoc);
+                $pctSoc = $allowanceSoc > 0 ? min(100, ($remSoc / $allowanceSoc) * 100) : 0;
+            @endphp
+
+            <div class="bg-gradient-to-r from-blue-900/10 to-[#0a0a0a] border border-blue-500/20 rounded-2xl p-5 relative overflow-hidden group hover:border-blue-500/40 transition-colors shadow-[0_0_30px_rgba(37,99,235,0.05)]">
+                
+                {{-- Decorative glowing line --}}
+                <div class="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-blue-500/50 to-transparent"></div>
+
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                    <span class="text-[10px] text-blue-400 font-black uppercase tracking-widest flex items-center gap-2">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Neural Wallet Usage
+                    </span>
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-[8px] text-gray-500 font-mono uppercase tracking-widest bg-black/50 px-2 py-1 rounded border border-white/5">
+                            Tier: <span class="text-white font-bold ml-1">{{ $activeWallet->package->name }}</span>
+                        </span>
+                        @if($expiryDate)
+                            <div class="flex items-center gap-2">
+                                <span class="text-[8px] font-mono uppercase tracking-widest px-2 py-1 rounded border {{ now()->greaterThan($expiryDate) ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' }}">
+                                    Exp: {{ \Carbon\Carbon::parse($expiryDate)->timezone('Asia/Dhaka')->format('M d, Y - h:i A') }}
+                                </span>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+                
+                {{-- THE 6 COMPACT CREDIT CARDS (REMAINING / TOTAL) --}}
+                <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
+                    
+                    {{-- 1. Prompts --}}
+                    <div class="bg-black/80 border border-white/5 rounded-lg p-2.5 flex flex-col items-center justify-center text-center hover:bg-white/5 transition-colors relative group/item">
+                        <span class="text-[7px] font-bold text-gray-500 uppercase tracking-widest mb-1 line-clamp-1">Prompts</span>
+                        <div class="text-base font-black leading-none {{ $remDir <= 0 ? 'text-red-500' : 'text-white' }}">
+                            {{ $remDir }}<span class="text-[8px] text-gray-600 font-mono ml-0.5">/{{ $allowanceDir }}</span>
+                        </div>
+                        <div class="absolute bottom-0 left-0 h-0.5 bg-gray-600/30 w-full rounded-b-lg overflow-hidden">
+                            <div class="h-full bg-white transition-all" style="width: {{ $pctDir }}%"></div>
+                        </div>
+                    </div>
+
+                    {{-- 2. Image Gens --}}
+                    <div class="bg-black/80 border border-white/5 rounded-lg p-2.5 flex flex-col items-center justify-center text-center hover:bg-white/5 transition-colors relative group/item">
+                        <span class="text-[7px] font-bold text-gray-500 uppercase tracking-widest mb-1 line-clamp-1">Image Gens</span>
+                        <div class="text-base font-black leading-none {{ $remImg <= 0 ? 'text-red-500' : 'text-emerald-400' }}">
+                            {{ $remImg }}<span class="text-[8px] text-gray-600 font-mono ml-0.5">/{{ $allowanceImg }}</span>
+                        </div>
+                        <div class="absolute bottom-0 left-0 h-0.5 bg-gray-600/30 w-full rounded-b-lg overflow-hidden">
+                            <div class="h-full bg-emerald-500 transition-all" style="width: {{ $pctImg }}%"></div>
+                        </div>
+                    </div>
+
+                    {{-- 3. Video Synth --}}
+                    <div class="bg-black/80 border border-white/5 rounded-lg p-2.5 flex flex-col items-center justify-center text-center hover:bg-white/5 transition-colors relative group/item">
+                        <span class="text-[7px] font-bold text-gray-500 uppercase tracking-widest mb-1 line-clamp-1">Video Synth</span>
+                        <div class="text-base font-black leading-none {{ $remVid <= 0 ? 'text-red-500' : 'text-pink-400' }}">
+                            {{ $remVid }}<span class="text-[8px] text-gray-600 font-mono ml-0.5">/{{ $allowanceVid }}</span>
+                        </div>
+                        <div class="absolute bottom-0 left-0 h-0.5 bg-gray-600/30 w-full rounded-b-lg overflow-hidden">
+                            <div class="h-full bg-pink-500 transition-all" style="width: {{ $pctVid }}%"></div>
+                        </div>
+                    </div>
+
+                    {{-- 4. B_Images --}}
+                    <div class="bg-black/80 border border-white/5 rounded-lg p-2.5 flex flex-col items-center justify-center text-center hover:bg-white/5 transition-colors relative group/item">
+                        <span class="text-[7px] font-bold text-gray-500 uppercase tracking-widest mb-1 line-clamp-1">B_Images</span>
+                        <div class="text-base font-black leading-none {{ $remBImg <= 0 ? 'text-red-500' : 'text-blue-400' }}">
+                            {{ $remBImg }}<span class="text-[8px] text-gray-600 font-mono ml-0.5">/{{ $allowanceBImg }}</span>
+                        </div>
+                        <div class="absolute bottom-0 left-0 h-0.5 bg-gray-600/30 w-full rounded-b-lg overflow-hidden">
+                            <div class="h-full bg-blue-500 transition-all" style="width: {{ $pctBImg }}%"></div>
+                        </div>
+                    </div>
+
+                    {{-- 5. B_Videos --}}
+                    <div class="bg-black/80 border border-white/5 rounded-lg p-2.5 flex flex-col items-center justify-center text-center hover:bg-white/5 transition-colors relative group/item">
+                        <span class="text-[7px] font-bold text-gray-500 uppercase tracking-widest mb-1 line-clamp-1">B_Videos</span>
+                        <div class="text-base font-black leading-none {{ $remBVid <= 0 ? 'text-red-500' : 'text-orange-400' }}">
+                            {{ $remBVid }}<span class="text-[8px] text-gray-600 font-mono ml-0.5">/{{ $allowanceBVid }}</span>
+                        </div>
+                        <div class="absolute bottom-0 left-0 h-0.5 bg-gray-600/30 w-full rounded-b-lg overflow-hidden">
+                            <div class="h-full bg-orange-500 transition-all" style="width: {{ $pctBVid }}%"></div>
+                        </div>
+                    </div>
+
+                    {{-- 6. Social Pub --}}
+                    <div class="bg-black/80 border border-white/5 rounded-lg p-2.5 flex flex-col items-center justify-center text-center hover:bg-white/5 transition-colors relative group/item">
+                        <span class="text-[7px] font-bold text-gray-500 uppercase tracking-widest mb-1 line-clamp-1">Social Pub</span>
+                        <div class="text-base font-black leading-none {{ $remSoc <= 0 ? 'text-red-500' : 'text-teal-400' }}">
+                            {{ $remSoc }}<span class="text-[8px] text-gray-600 font-mono ml-0.5">/{{ $allowanceSoc }}</span>
+                        </div>
+                        <div class="absolute bottom-0 left-0 h-0.5 bg-gray-600/30 w-full rounded-b-lg overflow-hidden">
+                            <div class="h-full bg-teal-500 transition-all" style="width: {{ $pctSoc }}%"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        @endif
+
         @can('subscribe_to_packages')
             @php
                 $pendingBill = \App\Models\Billing::where('user_id', auth()->id())->where('status', 'due')->latest()->first();
@@ -119,62 +250,6 @@
                 </div>
             </div>
         @endif
-
-        {{-- 4. SUBSCRIPTION STATUS PANEL --}}
-        <div class="bg-[#0a0a0a] border {{ $activeWallet ? 'border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.05)]' : 'border-white/5' }} p-6 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
-            
-            {{-- Background decorative glow --}}
-            @if($activeWallet)
-                <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-            @endif
-
-            <div class="flex items-center gap-5 z-10">
-                <div class="w-14 h-14 rounded-xl flex items-center justify-center shadow-inner {{ $activeWallet ? 'bg-gradient-to-br from-emerald-500/20 to-emerald-900/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/5 text-gray-500 border border-white/10' }}">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                </div>
-                <div>
-                    <h2 class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Network Authorization</h2>
-                    @if($activeWallet)
-                        <div class="flex items-center gap-3">
-                            <p class="text-lg font-black text-white uppercase tracking-wider">
-                                {{ $activeWallet->package->name ?? 'Custom' }} 
-                            </p>
-                            @if($expiryDate && now()->greaterThan($expiryDate))
-                                <span class="px-2.5 py-1 text-[9px] font-black bg-red-500/10 text-red-500 border border-red-500/20 rounded uppercase tracking-widest">Expired</span>
-                            @else
-                                <span class="px-2.5 py-1 text-[9px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded uppercase tracking-widest">Active Link</span>
-                            @endif
-                        </div>
-                    @else
-                        <p class="text-base font-black text-gray-400 uppercase tracking-wider">No Active Authorization</p>
-                    @endif
-                </div>
-            </div>
-
-            <div class="flex flex-col md:items-end w-full md:w-auto z-10 border-t md:border-t-0 border-white/5 pt-4 md:pt-0">
-                @if($activeWallet && $expiryDate)
-                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Cycle Terminates</p>
-                    @if($expiryDate->diffInYears(now()) > 50)
-                        <p class="text-sm font-mono font-bold text-blue-400 bg-blue-500/10 px-3 py-1 rounded border border-blue-500/20">LIFETIME_ACCESS</p>
-                    @else
-                        <div class="flex items-center gap-3">
-                            <p class="text-sm font-mono font-bold px-3 py-1 rounded border {{ now()->greaterThan($expiryDate) ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-gray-300 bg-white/5 border-white/10' }}">
-                                {{ \Carbon\Carbon::parse($expiryDate)->timezone('Asia/Dhaka')->format('M d, Y - h:i A') }}
-                            </p>
-                            @if(now()->lessThan($expiryDate))
-                                <span class="px-2.5 py-1 text-[9px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded uppercase tracking-widest shadow-sm">
-                                    {{ \Carbon\Carbon::now()->timezone('Asia/Dhaka')->diffForHumans($expiryDate, ['parts' => 4, 'short' => true]) }}
-                                </span>
-                            @endif
-                        </div>
-                    @endif
-                @else
-                    {{-- <a href="{{ route('pricing.index') }}" class="w-full md:w-auto px-6 py-3 bg-white hover:bg-gray-200 text-black text-[11px] font-black uppercase tracking-widest rounded-lg shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all text-center">
-                        Establish Link (Upgrade)
-                    </a> --}}
-                @endif
-            </div>
-        </div>
 
         {{-- 5. MAIN DASHBOARD GRID --}}
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -269,7 +344,7 @@
             </div>
         </div>
 
-        {{-- 6. FOOTER / BRANDING --}}
+        {{-- 7. FOOTER / BRANDING --}}
         <div class="flex flex-col sm:flex-row items-center justify-between pt-8 pb-4 border-t border-white/5 gap-4">
             <div class="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity cursor-default">
                 <p class="text-[10px] font-black tracking-[0.3em] text-gray-500 uppercase">

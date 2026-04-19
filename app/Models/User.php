@@ -30,6 +30,8 @@ class User extends Authenticatable
         'image_credits',
         'video_credits',
         'branding_credits',
+        'branding_image_credits',
+        'branding_video_credits',
         'social_post_credits',
         'expiry_date', // <-- ADDED THIS so it can be updated by the Admin
     ];
@@ -64,5 +66,12 @@ class User extends Authenticatable
     public function package()
     {
         return $this->belongsTo(Package::class);
+    }
+    /**
+     * Get the logos associated with the user.
+     */
+    public function logos()
+    {
+        return $this->hasMany(Logo::class);
     }
 }

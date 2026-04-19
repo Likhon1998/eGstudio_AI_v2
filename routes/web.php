@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\LogoController;
 use App\Http\Controllers\PricingController;
 use App\Http\Controllers\ProductAssetController;
 use App\Http\Controllers\ProfileController;
@@ -34,10 +35,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/cgi/{id}/make-video', [CgiGenerationController::class, 'makeVideo'])->name('cgi.make-video');
     Route::get('/cgi/videos', [CgiGenerationController::class, 'videoGallery'])->name('cgi.videos');
     Route::get('/cgi/images', [CgiGenerationController::class, 'imageGallery'])->name('cgi.images');
-    Route::post('/cgi/apply-branding', [CgiGenerationController::class, 'applyBranding'])->name('cgi.applyBranding');
+    Route::post('/cgi/apply-branding-image', [CgiGenerationController::class, 'applyBrandingImage'])->name('cgi.applyBrandingImage');
+    Route::post('/cgi/apply-branding-video', [CgiGenerationController::class, 'applyBrandingVideo'])->name('cgi.applyBrandingVideo');
     Route::post('/cgi/{id}/publish', [CgiGenerationController::class, 'publishToSocial'])->name('cgi.publish');
     Route::get('/cgi/post-history', [CgiGenerationController::class, 'postHistory'])->name('cgi.post_history');
     
+    // Brand Logo Library
+    Route::get('/logos', [LogoController::class, 'index'])->name('logos.index');
+    Route::post('/logos', [LogoController::class, 'store'])->name('logos.store');
+    Route::delete('/logos/{logo}', [LogoController::class, 'destroy'])->name('logos.destroy');
     // SaaS User Billing & Pricing
     Route::get('/pricing', [PricingController::class, 'index'])->name('pricing.index');
     Route::post('/pricing/select/{id}', [PricingController::class, 'selectPackage'])->name('pricing.select');
@@ -69,7 +75,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::post('/roles', [AdminController::class, 'storeRole'])->name('roles.store');
     Route::get('/roles/{id}/edit', [AdminController::class, 'editRole'])->name('roles.edit');
     Route::put('/roles/{id}', [AdminController::class, 'updateRole'])->name('roles.update');
-    
+    Route::post('/users/{id}/top-up', [AdminController::class, 'topUpCredits'])->name('users.top_up');
+    Route::get('/credit-logs', [AdminController::class, 'creditLogs'])->name('credit_logs');
     // FIXED: Removed the extra '/admin' and 'admin.' since they are automatically applied by the group!
     Route::post('/users/{user}/activate-tier', [AdminController::class, 'activateTier'])
         ->name('users.activate_tier');
@@ -81,6 +88,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('packages/{id}/edit', [PackageController::class, 'edit'])->name('packages.edit');
     Route::put('packages/{id}', [PackageController::class, 'update'])->name('packages.update');
 
+    
     
     // Activation Requests (Secured Controller & View)
     Route::post('/billings/{id}/approve', [PackageController::class, 'approvePayment'])->name('billings.approve'); 

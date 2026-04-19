@@ -17,7 +17,9 @@ class Package extends Model
         'directive_allowance',
         'image_allowance',
         'video_allowance',
-        'branding_allowance', // The new Add Logo limit!
+        'branding_allowance',
+        'branding_image_allowance',
+        'branding_video_allowance',
         'social_post_allowance'
     ];
 

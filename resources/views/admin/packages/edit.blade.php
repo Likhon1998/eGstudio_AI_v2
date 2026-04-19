@@ -84,15 +84,32 @@
                         </div>
 
                         {{-- Logos --}}
-                        <div class="space-y-1.5 bg-white/5 p-4 rounded-xl border border-white/5 text-center">
-                            <label class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Logos</label>
-                            <input type="number" name="branding_allowance" value="{{ old('branding_allowance', $package->branding_allowance) }}" required class="w-full bg-black border border-white/10 rounded text-center p-2 text-purple-400 text-sm focus:border-emerald-500 outline-none font-mono">
-                        </div>
+                        <div class="col-span-full space-y-4">
+                            <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center border-b border-white/5 pb-2 mb-4">Neural Allowances (Branding)</h4>
+                            
+                            {{-- Branding Allowance (Total) --}}
+                            <div class="bg-black/50 p-3 rounded-lg flex items-center justify-between">
+                                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Branding</label>
+                                <input type="number" name="branding_allowance" value="{{ old('branding_allowance', $package->branding_allowance) }}" required class="w-20 bg-black border border-white/10 rounded text-center p-2 text-purple-400 text-sm focus:border-emerald-500 outline-none font-mono">
+                            </div>
 
-                        {{-- Posts --}}
-                        <div class="space-y-1.5 bg-white/5 p-4 rounded-xl border border-white/5 text-center">
-                            <label class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Posts</label>
-                            <input type="number" name="social_post_allowance" value="{{ old('social_post_allowance', $package->social_post_allowance) }}" required class="w-full bg-black border border-white/10 rounded text-center p-2 text-blue-400 text-sm focus:border-emerald-500 outline-none font-mono">
+                            {{-- Branding Image Allowance --}}
+                            <div class="bg-black/50 p-3 rounded-lg flex items-center justify-between">
+                                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Branding: Images</label>
+                                <input type="number" name="branding_image_allowance" value="{{ old('branding_image_allowance', $package->branding_image_allowance) }}" required class="w-20 bg-black border border-white/10 rounded text-center p-2 text-blue-400 text-sm focus:border-emerald-500 outline-none font-mono">
+                            </div>
+                            
+                            {{-- Branding Video Allowance --}}
+                            <div class="bg-black/50 p-3 rounded-lg flex items-center justify-between">
+                                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Branding: Videos</label>
+                                <input type="number" name="branding_video_allowance" value="{{ old('branding_video_allowance', $package->branding_video_allowance) }}" required class="w-20 bg-black border border-white/10 rounded text-center p-2 text-pink-400 text-sm focus:border-emerald-500 outline-none font-mono">
+                            </div>
+
+                            {{-- Social Post Allowance --}}
+                            <div class="bg-black/50 p-3 rounded-lg flex items-center justify-between">
+                                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Social Posts</label>
+                                <input type="number" name="social_post_allowance" value="{{ old('social_post_allowance', $package->social_post_allowance) }}" required class="w-20 bg-black border border-white/10 rounded text-center p-2 text-blue-400 text-sm focus:border-emerald-500 outline-none font-mono">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -100,8 +117,8 @@
                 {{-- Action Button --}}
                 <div class="pt-4 flex justify-end">
                     <button type="submit" class="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black uppercase tracking-widest rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.3)] transition-all flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
-                        Save Package Updates
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                        Save Changes
                     </button>
                 </div>
 

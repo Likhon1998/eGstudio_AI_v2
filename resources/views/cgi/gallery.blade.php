@@ -22,7 +22,30 @@
 
     {{-- Gallery Workspace --}}
     <div class="max-w-full mx-auto bg-[#050505] min-h-screen flex flex-col" 
-         x-data="{ openModal: false, currentVideo: '', filter: 'all' }">
+         x-data="{ 
+            openModal: false, 
+            currentVideo: '', 
+            filter: 'all',
+            async forceDownload(url, filename) {
+                try {
+                    $dispatch('notify', { message: 'Preparing Download...', type: 'info' });
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = filename || 'neural-asset.mp4';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(blobUrl);
+                    $dispatch('notify', { message: 'Download Initiated', type: 'success' });
+                } catch (e) {
+                    $dispatch('notify', { message: 'Download Failed', type: 'error' });
+                    window.open(url, '_blank');
+                }
+            }
+         }">
         
         {{-- Header & Filter Bar --}}
         <div class="flex flex-col md:flex-row items-center justify-between px-8 py-6 border-b border-white/5 bg-[#0a0a0a] gap-6">
@@ -88,7 +111,10 @@
                                 <h3 class="text-[11px] font-black text-white uppercase truncate">{{ $video->product_name }}</h3>
                                 <div class="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
                                     <span class="text-[8px] text-blue-500 font-bold uppercase tracking-widest">Master Production</span>
-                                    <a href="{{ str_starts_with($video->branded_video_url, 'http') ? $video->branded_video_url : asset('storage/' . $video->branded_video_url) }}" download @click.stop class="text-gray-600 hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></a>
+                                    <button @click.stop="forceDownload('{{ str_starts_with($video->branded_video_url, 'http') ? $video->branded_video_url : asset('storage/' . $video->branded_video_url) }}', 'branded-{{ $video->id }}.mp4')" 
+                                            class="text-gray-600 hover:text-white transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -113,7 +139,10 @@
                                 <h3 class="text-[11px] font-black text-white uppercase truncate">{{ $video->product_name }}</h3>
                                 <div class="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
                                     <span class="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Raw Render</span>
-                                    <a href="{{ str_starts_with($video->video_url, 'http') ? $video->video_url : asset('storage/' . $video->video_url) }}" download @click.stop class="text-gray-600 hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></a>
+                                    <button @click.stop="forceDownload('{{ str_starts_with($video->video_url, 'http') ? $video->video_url : asset('storage/' . $video->video_url) }}', 'raw-{{ $video->id }}.mp4')" 
+                                            class="text-gray-600 hover:text-white transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                    </button>
                                 </div>
                             </div>
                         </div>

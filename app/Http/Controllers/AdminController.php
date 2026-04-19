@@ -195,8 +195,6 @@ class AdminController extends Controller
         $package = \App\Models\Package::findOrFail($request->package_id);
 
         // 2. Handle Old Packages & Calculate new Expiration
-        // If the user already has an active package, we should start counting the new duration
-        // from the END of their current package's expiration, so they don't lose time.
         $currentActive = \App\Models\UserPackage::where('user_id', $client->id)
             ->where('is_active_selection', 'true')
             ->first();
@@ -226,11 +224,13 @@ class AdminController extends Controller
             'package_id'          => $package->id,
             'is_active_selection' => 'true', 
             
-            'directive_credits'   => $package->directive_allowance ?? 0,
-            'image_credits'       => $package->image_allowance ?? 0,
-            'video_credits'       => $package->video_allowance ?? 0,
-            'branding_credits'    => $package->branding_allowance ?? 0,
-            'social_post_credits' => $package->social_post_allowance ?? 0,
+            'directive_credits'      => $package->directive_allowance ?? 0,
+            'image_credits'          => $package->image_allowance ?? 0,
+            'video_credits'          => $package->video_allowance ?? 0,
+            'branding_credits'       => $package->branding_allowance ?? 0, // <--- FIXED: ADDED MISSING LINE
+            'branding_image_credits' => $package->branding_image_allowance ?? 0,
+            'branding_video_credits' => $package->branding_video_allowance ?? 0,
+            'social_post_credits'    => $package->social_post_allowance ?? 0,
             
             'expires_at'          => $expiresAt,
         ]);
@@ -239,11 +239,13 @@ class AdminController extends Controller
             'package_id' => $package->id,
             'expiry_date' => $expiresAt,
             // Automatically grant the credits to the user's balance
-            'directive_credits'   => \DB::raw('directive_credits + ' . ($package->directive_allowance ?? 0)),
-            'image_credits'       => \DB::raw('image_credits + ' . ($package->image_allowance ?? 0)),
-            'video_credits'       => \DB::raw('video_credits + ' . ($package->video_allowance ?? 0)),
-            'branding_credits'    => \DB::raw('branding_credits + ' . ($package->branding_allowance ?? 0)),
-            'social_post_credits' => \DB::raw('social_post_credits + ' . ($package->social_post_allowance ?? 0)),
+            'directive_credits'      => \DB::raw('directive_credits + ' . ($package->directive_allowance ?? 0)),
+            'image_credits'          => \DB::raw('image_credits + ' . ($package->image_allowance ?? 0)),
+            'video_credits'          => \DB::raw('video_credits + ' . ($package->video_allowance ?? 0)),
+            'branding_credits'       => \DB::raw('branding_credits + ' . ($package->branding_allowance ?? 0)), // <--- FIXED: ADDED MISSING LINE
+            'branding_image_credits' => \DB::raw('branding_image_credits + ' . ($package->branding_image_allowance ?? 0)),
+            'branding_video_credits' => \DB::raw('branding_video_credits + ' . ($package->branding_video_allowance ?? 0)),
+            'social_post_credits'    => \DB::raw('social_post_credits + ' . ($package->social_post_allowance ?? 0)),
         ]);
 
         // 5. GENERATE THE PAID INVOICE AUTOMATICALLY
@@ -257,5 +259,64 @@ class AdminController extends Controller
         ]);
 
         return back()->with('success', "Success! {$package->name} ({$package->billing_cycle}) is active, and a paid invoice has been generated for {$client->name}.");
+    }
+
+
+   /**
+     * ========================================================================
+     * METHOD: topUpCredits (WITH BILLING AUDIT TRAIL)
+     * ========================================================================
+     * Injects credits into the user's active running package and logs it.
+     */
+    public function topUpCredits(Request $request, $id)
+    {
+        // <--- FIXED: Added 'branding_credits' to the allowed validation list
+        $request->validate([
+            'credit_type'  => 'required|in:directive_credits,image_credits,video_credits,branding_credits,branding_image_credits,branding_video_credits,social_post_credits',
+            'amount'       => 'required|integer|min:1|max:1000',
+            'billing_note' => 'nullable|string|max:255'
+        ]);
+
+        // 1. Find the user's ACTIVE wallet
+        $activeWallet = \App\Models\UserPackage::where('user_id', $id)
+            ->where('is_active_selection', 'true')
+            ->where(function ($query) {
+                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->first();
+
+        if (!$activeWallet) {
+            return redirect()->back()->with('error', 'Action Denied: This user does not have an active package running.');
+        }
+
+        // 2. Inject the credits
+        $activeWallet->increment($request->credit_type, $request->amount);
+
+        // 3. Create the Audit/Billing Log
+        \App\Models\CreditInjectionLog::create([
+            'user_id'      => $id,
+            'admin_id'     => auth()->id(),
+            'credit_type'  => $request->credit_type,
+            'amount'       => $request->amount,
+            'billing_note' => $request->billing_note,
+        ]);
+
+        $prettyName = ucwords(str_replace('_', ' ', $request->credit_type));
+        return redirect()->back()->with('success', "Added {$request->amount} {$prettyName}. Transaction logged for billing!");
+    }
+
+    /**
+     * ========================================================================
+     * METHOD: creditLogs 
+     * ========================================================================
+     * View the manual top-up audit ledger.
+     */
+    public function creditLogs()
+    {
+        $logs = \App\Models\CreditInjectionLog::with(['user', 'admin'])
+            ->latest()
+            ->get();
+
+        return view('admin.credit_logs', compact('logs'));
     }
 }

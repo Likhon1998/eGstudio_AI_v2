@@ -15,6 +15,10 @@
     $videoCredits = $activeWallet->video_credits ?? 0;
     $brandingCredits = $activeWallet->branding_credits ?? 0;
     $socialCredits = $activeWallet->social_post_credits ?? 0;
+    
+    // FIXED: Added variables for specific Image and Video branding credits
+    $bImageCredits = $activeWallet->branding_image_credits ?? 0;
+    $bVideoCredits = $activeWallet->branding_video_credits ?? 0;
 @endphp
 
 <x-app-layout>
@@ -58,7 +62,7 @@
 
     {{-- Main Workspace --}}
     <div class="max-w-full mx-auto bg-[#050505] min-h-screen"
-        x-data="{ brandingModal: false, activeGenId: null, activeImageUrl: '', activeVideoUrl: '', isUploadingLogo: false, activePreviewUrl: '' }">
+        x-data="{ brandingModal: false, activeGenId: null, brandingTarget: null, activeImageUrl: '', activeVideoUrl: '', activeBrandedImageUrl: '', activeBrandedVideoUrl: '', isUploadingLogo: false, activePreviewUrl: '' }">
 
         {{-- Slim Top Toolbar --}}
         <div class="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/5 bg-[#0a0a0a]">
@@ -74,7 +78,7 @@
             </div>
 
             <div class="flex items-center gap-3">
-                {{-- NEW POST HISTORY BUTTON --}}
+                {{-- POST HISTORY BUTTON --}}
                 <a href="{{ route('cgi.post_history') }}"
                     class="flex items-center gap-2 px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-[9px] font-black rounded-md transition-all uppercase tracking-widest shadow-lg">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -139,14 +143,21 @@
 
                                     brandedImageUrl: '{{ $gen->branded_image_url ? (str_starts_with($gen->branded_image_url, "http") ? $gen->branded_image_url : asset("storage/" . $gen->branded_image_url)) : "" }}',
                                     brandedVideoUrl: '{{ $gen->branded_video_url ? (str_starts_with($gen->branded_video_url, "http") ? $gen->branded_video_url : asset("storage/" . $gen->branded_video_url)) : "" }}',
-                                    isBranding: ('{{ $gen->branded_image_url ?? '' }}' !== '' && '{{ $gen->branded_video_url ?? '' }}' !== '') 
+                                    
+                                    {{-- Split tracking for independent branding --}}
+                                    isBrandingImage: ('{{ $gen->branded_image_url ?? '' }}' !== '') 
                                                 ? false 
-                                                : (sessionStorage.getItem('branding_{{ $gen->id }}') === 'true'),
+                                                : (sessionStorage.getItem('branding_img_{{ $gen->id }}') === 'true'),
+                                                
+                                    isBrandingVideo: ('{{ $gen->branded_video_url ?? '' }}' !== '') 
+                                                ? false 
+                                                : (sessionStorage.getItem('branding_vid_{{ $gen->id }}') === 'true'),
 
-                                    {{-- CREDIT AUTHORIZATION CHECKS --}}
+                                    {{-- FIXED CREDIT AUTHORIZATION CHECKS (Uses Active Wallet Variables) --}}
                                     hasImageCredits: {{ ($isAdmin || $imageCredits > 0) ? 'true' : 'false' }},
                                     hasVideoCredits: {{ ($isAdmin || $videoCredits > 0) ? 'true' : 'false' }},
-                                    hasBrandingCredits: {{ ($isAdmin || $brandingCredits > 0) ? 'true' : 'false' }},
+                                    hasBrandingImageCredits: {{ ($isAdmin || $bImageCredits > 0) ? 'true' : 'false' }},
+                                    hasBrandingVideoCredits: {{ ($isAdmin || $bVideoCredits > 0) ? 'true' : 'false' }},
                                     hasSocialCredits: {{ ($isAdmin || $socialCredits > 0) ? 'true' : 'false' }},
 
                                     {{-- Post creation state --}}
@@ -209,13 +220,13 @@
                                     },
 
                                     checkAndReload() {
-
-
                                         let loading = false;
                                         if (this.status === 'processing') loading = true;
                                         if (this.imageStatus === 'making' && !this.imageUrl) loading = true;
                                         if (this.videoStatus === 'making' && !this.videoUrl) loading = true;
-                                        if (this.isBranding && (!this.brandedImageUrl || !this.brandedVideoUrl)) loading = true;
+                                        if (this.isBrandingImage && !this.brandedImageUrl) loading = true;
+                                        if (this.isBrandingVideo && !this.brandedVideoUrl) loading = true;
+                                        
                                         if (loading) {
                                             setTimeout(() => { location.reload(); }, 5000);
                                         }
@@ -305,18 +316,29 @@
                                     }
                                 }" x-init="
 
-                                        if(brandedImageUrl && brandedVideoUrl) {
-                                            sessionStorage.removeItem('branding_{{ $gen->id }}');
-                                            isBranding = false;
+                                        if(brandedImageUrl) {
+                                            sessionStorage.removeItem('branding_img_{{ $gen->id }}');
+                                            isBrandingImage = false;
+                                        }
+                                        if(brandedVideoUrl) {
+                                            sessionStorage.removeItem('branding_vid_{{ $gen->id }}');
+                                            isBrandingVideo = false;
                                         }
                                         checkAndReload();
-                                    " @start-branding.window="
-                                    if($event.detail === '{{ $gen->id }}') {
-
-                                        isBranding = true;
-                                        checkAndReload();
-                                    }
-                                " class="hover:bg-white/[0.01] transition-colors">
+                                    " 
+                                    @start-branding-image.window="
+                                        if($event.detail === '{{ $gen->id }}') {
+                                            isBrandingImage = true;
+                                            checkAndReload();
+                                        }
+                                    "
+                                    @start-branding-video.window="
+                                        if($event.detail === '{{ $gen->id }}') {
+                                            isBrandingVideo = true;
+                                            checkAndReload();
+                                        }
+                                    "
+                                    class="hover:bg-white/[0.01] transition-colors">
 
 
 
@@ -388,152 +410,136 @@
                                         @else
 
 
-                                            {{-- ADDED FLEX-WRAP TO PREVENT HORIZONTAL SCROLLING --}}
+                                            <div class="flex flex-col gap-2">
+                                                
+                                                {{-- IMAGE RENDERING CONTROLS --}}
+                                                <div class="flex flex-wrap items-center gap-2">
 
-                                            <div class="flex flex-wrap items-center gap-2">
-
-                                                @can('generate_images')
-                                                    <button
-                                                        @click="if(!imageUrl && !hasImageCredits) { $dispatch('notify', {message: 'Insufficient Image Credits! Please upgrade plan.', type: 'error'}); return; }; imageUrl ? (switchModal('preview'), activePreviewUrl=imageUrl) : triggerMakePicture()"
-                                                        :disabled="imageStatus==='making' || isTriggering || (!imageUrl && !hasImageCredits)"
-                                                        class="h-8 px-3 text-[9px] font-black rounded transition-all uppercase tracking-widest flex items-center gap-1.5 border shadow-lg"
-                                                        :class="{
-                                                                'bg-emerald-500 border-emerald-500 text-black animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.4)]': imageStatus === 'making' && !imageUrl,
-                                                                'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white': imageUrl,
-                                                                'bg-white text-black border-transparent hover:bg-blue-600 hover:text-white': !imageUrl && imageStatus !== 'making' && hasImageCredits,
-                                                                'bg-white/5 border-white/10 text-gray-600 cursor-not-allowed': !imageUrl && imageStatus !== 'making' && !hasImageCredits
-                                                            }">
-                                                        <span
-                                                            x-text="(imageStatus==='making' && !imageUrl) ? 'RENDERING...' : (imageUrl ? 'View Pic' : (hasImageCredits ? 'Make Pic' : '0 Credits'))"></span>
-                                                    </button>
-                                                @else
-                                                    <template x-if="imageUrl">
-                                                        <button @click="switchModal('preview'); activePreviewUrl=imageUrl"
-                                                            class="h-8 px-3 text-[9px] font-black rounded transition-all uppercase tracking-widest flex items-center gap-1.5 border shadow-lg bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white">
-                                                            <span>View Pic</span>
-                                                        </button>
-                                                    </template>
-                                                    <template x-if="!imageUrl">
-                                                        <button disabled
-                                                            class="h-8 px-3 text-[9px] font-black rounded uppercase tracking-widest flex items-center gap-1.5 border bg-white/5 border-white/10 text-gray-600 cursor-not-allowed">
-                                                            <span>Restricted</span>
-                                                        </button>
-                                                    </template>
-                                                @endcan
-
-                                                @can('generate_videos')
-                                                    <button
-                                                        @click="if(!videoUrl && !hasVideoCredits) { $dispatch('notify', {message: 'Insufficient Video Credits! Please upgrade plan.', type: 'error'}); return; }; videoUrl ? (switchModal('videoPreview'), activePreviewUrl=videoUrl) : triggerMakeVideo()"
-                                                        :disabled="videoStatus==='making' || isVideoTriggering || !imageUrl || (!videoUrl && !hasVideoCredits)"
-                                                        class="h-8 px-3 text-[9px] font-black rounded transition-all uppercase tracking-widest flex items-center gap-1.5 border disabled:opacity-10 shadow-lg"
-                                                        :class="{
-                                                                'bg-pink-500 border-pink-500 text-black animate-pulse shadow-[0_0_15px_rgba(236,72,153,0.4)]': videoStatus === 'making' && !videoUrl,
-                                                                'bg-pink-500/10 border-pink-500/20 text-pink-400 hover:bg-pink-500 hover:text-white shadow-pink-500/10': videoUrl,
-                                                                'bg-[#1a1a1a] text-gray-300 border-white/10 hover:bg-white hover:text-black': !videoUrl && videoStatus !== 'making' && hasVideoCredits,
-                                                                'bg-white/5 border-white/10 text-gray-600 cursor-not-allowed': !videoUrl && videoStatus !== 'making' && !hasVideoCredits
-                                                            }">
-                                                        <span
-                                                            x-text="(videoStatus==='making' && !videoUrl) ? 'SYNTHESIZING...' : (videoUrl ? 'View Video' : (hasVideoCredits ? 'Make Video' : '0 Credits'))"></span>
-                                                    </button>
-                                                @else
-                                                    <template x-if="videoUrl">
-                                                        <button @click="switchModal('videoPreview'); activePreviewUrl=videoUrl"
-                                                            class="h-8 px-3 text-[9px] font-black rounded transition-all uppercase tracking-widest flex items-center gap-1.5 border shadow-lg bg-pink-500/10 border-pink-500/20 text-pink-400 hover:bg-pink-500 hover:text-white shadow-pink-500/10">
-                                                            <span>View Video</span>
-                                                        </button>
-                                                    </template>
-                                                    <template x-if="!videoUrl">
-                                                        <button disabled
-                                                            class="h-8 px-3 text-[9px] font-black rounded uppercase tracking-widest flex items-center gap-1.5 border bg-white/5 border-white/10 text-gray-600 cursor-not-allowed">
-                                                            <span>Restricted</span>
-                                                        </button>
-                                                    </template>
-                                                @endcan
-
-                                                @can('apply_branding')
-                                                    <template
-                                                        x-if="imageUrl && videoUrl && (!brandedImageUrl || !brandedVideoUrl) && !isBranding">
+                                                    {{-- Make/View Pic --}}
+                                                    @can('generate_images')
                                                         <button
-                                                            @click="if(!hasBrandingCredits) { $dispatch('notify', {message: 'Insufficient Branding Credits!', type: 'error'}); return; }; brandingModal = true; activeGenId = '{{ $gen->id }}'; activeImageUrl = imageUrl; activeVideoUrl = videoUrl;"
-                                                            :disabled="!hasBrandingCredits"
+                                                            @click="if(!imageUrl && !hasImageCredits) { $dispatch('notify', {message: 'Insufficient Image Credits! Please upgrade plan.', type: 'error'}); return; }; imageUrl ? (switchModal('preview'), activePreviewUrl=imageUrl) : triggerMakePicture()"
+                                                            :disabled="imageStatus==='making' || isTriggering || (!imageUrl && !hasImageCredits)"
+                                                            class="h-8 px-3 text-[9px] font-black rounded transition-all uppercase tracking-widest flex items-center gap-1.5 border shadow-lg"
+                                                            :class="{
+                                                                    'bg-emerald-500 border-emerald-500 text-black animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.4)]': imageStatus === 'making' && !imageUrl,
+                                                                    'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white': imageUrl,
+                                                                    'bg-white text-black border-transparent hover:bg-blue-600 hover:text-white': !imageUrl && imageStatus !== 'making' && hasImageCredits,
+                                                                    'bg-white/5 border-white/10 text-gray-600 cursor-not-allowed': !imageUrl && imageStatus !== 'making' && !hasImageCredits
+                                                                }">
+                                                            <span
+                                                                x-text="(imageStatus==='making' && !imageUrl) ? 'RENDERING...' : (imageUrl ? 'View Pic' : (hasImageCredits ? 'Make Pic' : '0 Credits'))"></span>
+                                                        </button>
+                                                    @endcan
+                                                    
+                                                    {{-- ========================================================
+                                                         INLINE BRANDING BUTTONS FOR IMAGE (SAFE TEMPLATE LOGIC)
+                                                         ======================================================== --}}
+                                                    
+                                                    {{-- 1. Ready to Brand Button --}}
+                                                    <template x-if="imageUrl !== '' && !isBrandingImage && brandedImageUrl === ''">
+                                                        <button
+                                                            @click="if(!hasBrandingImageCredits) { $dispatch('notify', {message: 'Insufficient Image Branding Credits!', type: 'error'}); return; }; brandingModal = true; activeGenId = '{{ $gen->id }}'; activeImageUrl = imageUrl; brandingTarget = 'image';"
+                                                            :disabled="!hasBrandingImageCredits"
                                                             class="h-8 px-3 rounded transition-all uppercase tracking-widest text-[9px] font-black flex items-center gap-1.5 shadow-lg border"
-                                                            :class="hasBrandingCredits ? 'bg-white/5 border-white/10 hover:border-blue-500/50 text-gray-400 hover:text-blue-400' : 'bg-white/5 border-white/10 text-gray-600 cursor-not-allowed'">
-
-                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor"
-                                                                viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                                    stroke-width="2.5"
-                                                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
-                                                                </path>
-                                                            </svg>
-                                                            <span x-text="hasBrandingCredits ? 'Add Logo' : '0 Credits'"></span>
+                                                            :class="hasBrandingImageCredits ? 'bg-blue-500/10 border-blue-500/20 hover:border-blue-500/50 text-blue-400 hover:bg-blue-600 hover:text-white' : 'bg-white/5 border-white/10 text-gray-600 cursor-not-allowed'">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                                            <span x-text="hasBrandingImageCredits ? 'Add Logo in Pic' : '0 Credits'"></span>
                                                         </button>
                                                     </template>
-                                                @else
-                                                    <template x-if="imageUrl && videoUrl && (!brandedImageUrl || !brandedVideoUrl) && !isBranding">
+
+                                                    {{-- 2. Branding Loading State --}}
+                                                    <template x-if="imageUrl !== '' && isBrandingImage && brandedImageUrl === ''">
                                                         <button disabled
-                                                            class="h-8 px-3 text-[9px] font-black rounded uppercase tracking-widest flex items-center gap-1.5 border bg-white/5 border-white/10 text-gray-600 cursor-not-allowed">
-                                                            <span>Restricted</span>
+                                                            class="h-8 px-3 bg-blue-600 border border-blue-500 text-white rounded transition-all uppercase tracking-widest text-[9px] font-black flex items-center gap-1.5 shadow-lg animate-pulse shadow-[0_0_15px_rgba(37,99,235,0.4)]">
+                                                            BRANDING PIC...
                                                         </button>
                                                     </template>
-                                                @endcan
 
-
-                                                <template x-if="isBranding && (!brandedImageUrl || !brandedVideoUrl)">
-
-                                                    <button disabled
-                                                        class="h-8 px-3 bg-blue-600 border border-blue-500 text-white rounded transition-all uppercase tracking-widest text-[9px] font-black flex items-center gap-1.5 shadow-lg animate-pulse shadow-[0_0_15px_rgba(37,99,235,0.4)]">
-                                                        BRANDING...
-
-
-                                                    </button>
-                                                </template>
-
-
-
-                                                <template x-if="brandedImageUrl && brandedVideoUrl">
-                                                    <div class="flex items-center gap-2 flex-wrap">
-
-
+                                                    {{-- 3. Branded Pic Ready View --}}
+                                                    <template x-if="imageUrl !== '' && brandedImageUrl !== ''">
                                                         <button @click="switchModal('brandedPreview')"
                                                             class="h-8 px-3 bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded transition-all uppercase tracking-widest text-[9px] font-black shadow-lg">
-
                                                             Branded Pic
-
                                                         </button>
+                                                    </template>
 
+                                                </div>
 
+                                                {{-- VIDEO RENDERING CONTROLS --}}
+                                                <div class="flex flex-wrap items-center gap-2 mt-1">
+                                                    
+                                                    {{-- Make/View Video --}}
+                                                    @can('generate_videos')
+                                                        <button
+                                                            @click="if(!videoUrl && !hasVideoCredits) { $dispatch('notify', {message: 'Insufficient Video Credits! Please upgrade plan.', type: 'error'}); return; }; videoUrl ? (switchModal('videoPreview'), activePreviewUrl=videoUrl) : triggerMakeVideo()"
+                                                            :disabled="videoStatus==='making' || isVideoTriggering || !imageUrl || (!videoUrl && !hasVideoCredits)"
+                                                            class="h-8 px-3 text-[9px] font-black rounded transition-all uppercase tracking-widest flex items-center gap-1.5 border disabled:opacity-10 shadow-lg"
+                                                            :class="{
+                                                                    'bg-pink-500 border-pink-500 text-black animate-pulse shadow-[0_0_15px_rgba(236,72,153,0.4)]': videoStatus === 'making' && !videoUrl,
+                                                                    'bg-pink-500/10 border-pink-500/20 text-pink-400 hover:bg-pink-500 hover:text-white shadow-pink-500/10': videoUrl,
+                                                                    'bg-[#1a1a1a] text-gray-300 border-white/10 hover:bg-white hover:text-black': !videoUrl && videoStatus !== 'making' && hasVideoCredits,
+                                                                    'bg-white/5 border-white/10 text-gray-600 cursor-not-allowed': !videoUrl && videoStatus !== 'making' && !hasVideoCredits
+                                                                }">
+                                                            <span
+                                                                x-text="(videoStatus==='making' && !videoUrl) ? 'SYNTHESIZING...' : (videoUrl ? 'View Video' : (hasVideoCredits ? 'Make Video' : '0 Credits'))"></span>
+                                                        </button>
+                                                    @endcan
+                                                    
+                                                    {{-- ========================================================
+                                                         INLINE BRANDING BUTTONS FOR VIDEO (SAFE TEMPLATE LOGIC)
+                                                         ======================================================== --}}
+                                                    
+                                                    {{-- 1. Ready to Brand Button --}}
+                                                    <template x-if="videoUrl !== '' && !isBrandingVideo && brandedVideoUrl === ''">
+                                                        <button
+                                                            @click="if(!hasBrandingVideoCredits) { $dispatch('notify', {message: 'Insufficient Video Branding Credits!', type: 'error'}); return; }; brandingModal = true; activeGenId = '{{ $gen->id }}'; activeVideoUrl = videoUrl; brandingTarget = 'video';"
+                                                            :disabled="!hasBrandingVideoCredits"
+                                                            class="h-8 px-3 rounded transition-all uppercase tracking-widest text-[9px] font-black flex items-center gap-1.5 shadow-lg border"
+                                                            :class="hasBrandingVideoCredits ? 'bg-purple-500/10 border-purple-500/20 hover:border-purple-500/50 text-purple-400 hover:bg-purple-600 hover:text-white' : 'bg-white/5 border-white/10 text-gray-600 cursor-not-allowed'">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                                            <span x-text="hasBrandingVideoCredits ? 'Add Logo in Video' : '0 Credits'"></span>
+                                                        </button>
+                                                    </template>
+
+                                                    {{-- 2. Branding Loading State --}}
+                                                    <template x-if="videoUrl !== '' && isBrandingVideo && brandedVideoUrl === ''">
+                                                        <button disabled
+                                                            class="h-8 px-3 bg-purple-600 border border-purple-500 text-white rounded transition-all uppercase tracking-widest text-[9px] font-black flex items-center gap-1.5 shadow-lg animate-pulse shadow-[0_0_15px_rgba(147,51,234,0.4)]">
+                                                            BRANDING VID...
+                                                        </button>
+                                                    </template>
+
+                                                    {{-- 3. Branded Video Ready View --}}
+                                                    <template x-if="videoUrl !== '' && brandedVideoUrl !== ''">
                                                         <button @click="switchModal('brandedVideoPreview')"
                                                             class="h-8 px-3 bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-600 hover:text-white rounded transition-all uppercase tracking-widest text-[9px] font-black shadow-lg">
-                                                            Branded Video
-
-
+                                                            Branded Vid
                                                         </button>
-                                                    </div>
+                                                    </template>
 
+                                                </div>
+                                                
+                                                {{-- SOCIAL BROADCASTER --}}
+                                                <div class="flex flex-wrap items-center gap-2 mt-1">
+                                                    @can('publish_to_social')
+                                                        <button
+                                                            class="h-8 px-3 text-[9px] font-black rounded transition-all uppercase tracking-widest flex items-center gap-1.5 border shadow-lg"
+                                                            :class="hasSocialCredits ? 'bg-indigo-600/10 border-indigo-600/20 text-indigo-400 hover:bg-indigo-600 hover:text-white shadow-indigo-900/10' : 'bg-white/5 border-white/10 text-gray-600 cursor-not-allowed'"
+                                                            :disabled="!hasSocialCredits"
+                                                            @click="if(!hasSocialCredits) { $dispatch('notify', {message: 'Insufficient Social Post Credits!', type: 'error'}); return; }; switchModal('postAssets')">
 
-                                                </template>
+                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
+                                                                viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
+                                                                </path>
+                                                            </svg>
 
-
-                                                @can('publish_to_social')
-                                                    <button
-                                                        class="h-8 px-3 text-[9px] font-black rounded transition-all uppercase tracking-widest flex items-center gap-1.5 border shadow-lg"
-                                                        :class="hasSocialCredits ? 'bg-indigo-600/10 border-indigo-600/20 text-indigo-400 hover:bg-indigo-600 hover:text-white shadow-indigo-900/10' : 'bg-white/5 border-white/10 text-gray-600 cursor-not-allowed'"
-                                                        :disabled="!hasSocialCredits"
-                                                        @click="if(!hasSocialCredits) { $dispatch('notify', {message: 'Insufficient Social Post Credits!', type: 'error'}); return; }; switchModal('postAssets')">
-
-
-                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
-                                                            viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
-                                                            </path>
-                                                        </svg>
-
-
-                                                        <span x-text="hasSocialCredits ? 'Post Assets' : '0 Credits'"></span>
-                                                    </button>
-                                                @endcan
+                                                            <span x-text="hasSocialCredits ? 'Post Assets' : '0 Credits'"></span>
+                                                        </button>
+                                                    @endcan
+                                                </div>
 
 
                                             </div>
@@ -1103,9 +1109,11 @@
             </div>
         </div>
 
-        {{-- BRANDING UPLOAD MODAL --}}
+        {{-- BRANDING UPLOAD MODAL (DYNAMIC DUAL-PIPELINE FIX) --}}
         <template x-teleport="body">
-            <div x-show="brandingModal" x-data="{ logoPreview: null }"
+            <div x-show="brandingModal" x-data="{ 
+                    logoPreview: null,
+                }"
                 @close-branding.window="logoPreview = null; brandingModal = false"
                 class="fixed inset-0 z-[2100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl"
                 x-cloak>
@@ -1113,30 +1121,60 @@
                     @click.away="$dispatch('close-branding')">
                     <div class="flex justify-between items-start mb-6">
                         <div>
-                            <h2 class="text-white font-black uppercase tracking-[0.2em] text-sm">Apply Brand Identity
-                            </h2>
-                            <p class="text-gray-500 text-[9px] uppercase font-bold mt-1">Overlay Logo on Rendered Assets
-                            </p>
+                            <h2 class="text-white font-black uppercase tracking-[0.2em] text-sm">Apply Brand Identity</h2>
+                            <p class="text-gray-500 text-[9px] uppercase font-bold mt-1">Overlay Logo on Rendered Assets</p>
                         </div>
                         <button @click="$dispatch('close-branding')"
                             class="text-gray-600 hover:text-white transition-colors">✕</button>
                     </div>
+                    
+                    {{-- Dynamically updating target UI based on which button was clicked --}}
+                    <div class="mb-5 bg-[#0d0d0d] p-4 rounded-xl border border-white/5 shadow-inner">
+                        <p class="text-blue-400 text-[10px] font-black uppercase tracking-widest border-b border-white/5 pb-2 mb-3">Target Asset Configuration:</p>
+                        
+                        <div class="flex items-center gap-3">
+                            <span class="w-2 h-2 rounded-full animate-pulse shadow-lg"
+                                :class="brandingTarget === 'image' ? 'bg-blue-500 shadow-blue-500/50' : 'bg-purple-500 shadow-purple-500/50'"></span>
+                            <div class="flex flex-col text-left">
+                                <span class="text-[11px] text-white font-bold uppercase tracking-wider" 
+                                      x-text="brandingTarget === 'image' ? 'Image Branding Pipeline' : 'Video Branding Pipeline'"></span>
+                                <span class="text-[8px] font-mono uppercase block"
+                                      :class="brandingTarget === 'image' ? 'text-blue-500/70' : 'text-purple-500/70'"
+                                      x-text="brandingTarget === 'image' ? 'Costs 1 Image Brand Credit' : 'Costs 1 Video Brand Credit'"></span>
+                            </div>
+                        </div>
+                    </div>
+
                     <form @submit.prevent="
                         isUploadingLogo = true;
                         let formData = new FormData($el);
                         formData.append('id', activeGenId);
+                        
+                        // Switch endpoint based on the target button clicked
+                        let endpoint = brandingTarget === 'image' ? '/cgi/apply-branding-image' : '/cgi/apply-branding-video';
+
                         formData.append('logo', $el.querySelector('input[name=logo]').files[0]);
-                        fetch('/cgi/apply-branding', {
+                        
+                        fetch(endpoint, {
                             method: 'POST',
-                            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}','Accept': 'application/json' },
+
                             body: formData
                         })
                         .then(res => res.json())
                         .then(data => {
                             if(data.success) {
                                 $dispatch('close-branding');
-                                sessionStorage.setItem('branding_' + activeGenId, 'true');
-                                $dispatch('start-branding', activeGenId);
+                                
+                                // Set the specific session storage and dispatch specific event
+                                if(brandingTarget === 'image') {
+                                    sessionStorage.setItem('branding_img_' + activeGenId, 'true');
+                                    $dispatch('start-branding-image', activeGenId);
+                                } else {
+                                    sessionStorage.setItem('branding_vid_' + activeGenId, 'true');
+                                    $dispatch('start-branding-video', activeGenId);
+                                }
+                                
                                 $dispatch('notify', { message: 'Neural Branding Initiated', type: 'success' });
                             } else {
                                  $dispatch('notify', { message: data.message || 'Branding Failed', type: 'error' });
@@ -1147,8 +1185,8 @@
                         })
                         .finally(() => isUploadingLogo = false);
                     ">
-                        <div
-                            class="relative group border-2 border-dashed border-white/5 rounded-xl p-10 text-center hover:border-blue-500/30 transition-all bg-white/[0.01]">
+                        
+                        <div class="relative group border-2 border-dashed border-white/5 rounded-xl p-10 text-center hover:border-blue-500/30 transition-all bg-white/[0.01]">
                             <input type="file" name="logo" required id="logoInput"
                                 @change="const file = $event.target.files[0]; if (file) { logoPreview = URL.createObjectURL(file); }"
                                 class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
@@ -1185,17 +1223,29 @@
         </template>
     </div>
 
+    {{-- STUDIO DOCUMENTATION & STYLESHEET --}}
     <style>
+        /* * CGI DIRECTIVE STUDIO - NEURAL ASSET PIPELINE v3.2
+         * GLOBAL STYLESHEET & COMPONENT ARCHITECTURE
+         * =========================================================
+         * This section defines the structural aesthetic, transition 
+         * animations, and dark-mode optimization parameters.
+         */
+
         [x-cloak] {
             display: none !important;
         }
 
         body {
             background-color: #050505;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
+        /* Custom Scrollbar Implementation */
         ::-webkit-scrollbar {
             width: 4px;
+            height: 4px;
         }
 
         ::-webkit-scrollbar-track {
@@ -1206,5 +1256,93 @@
             background: #1a1a1a;
             border-radius: 10px;
         }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2a2a2a;
+        }
+
+        /* * NEURAL MODAL ANIMATIONS 
+         * =========================================================
+         * Smooth entry/exit transitions for all teleported UI blocks.
+         */
+        .animate-in {
+            animation-duration: 0.2s;
+            animation-fill-mode: both;
+            animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .fade-in {
+            animation-name: fadeIn;
+        }
+
+        .zoom-in {
+            animation-name: zoomIn;
+        }
+
+        .slide-in-from-bottom-4 {
+            animation-name: slideInBottom;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes slideInBottom {
+            from { transform: translateY(1rem); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* * FORM INPUT FOCUS STATES
+         * =========================================================
+         */
+        textarea:focus, input[type="text"]:focus {
+            box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.5);
+            border-color: rgba(59, 130, 246, 0.5) !important;
+        }
+
+        /* * BUTTON PULSE FX
+         * =========================================================
+         */
+        .btn-pulse {
+            position: relative;
+        }
+        
+        .btn-pulse::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: inherit;
+            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+            animation: pulse-ring 2s infinite cubic-bezier(0.66, 0, 0, 1);
+        }
+
+        @keyframes pulse-ring {
+            to {
+                box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+            }
+        }
+         
+         .pipeline-glow {
+             filter: drop-shadow(0 0 8px rgba(37,99,235,0.4));
+         }
+         
+         .glass-panel {
+             background: rgba(10, 10, 10, 0.7);
+             backdrop-filter: blur(12px);
+             -webkit-backdrop-filter: blur(12px);
+             border: 1px solid rgba(255, 255, 255, 0.05);
+         }
+         
+         .text-gradient {
+             background: linear-gradient(to right, #60a5fa, #a78bfa);
+             -webkit-background-clip: text;
+             -webkit-text-fill-color: transparent;
+         }
     </style>
 </x-app-layout>

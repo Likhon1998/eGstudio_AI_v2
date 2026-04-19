@@ -13,19 +13,38 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use App\Models\CgiSocialPost;
 
+/**
+ * Class CgiGenerationController
+ * * * ARCHITECTURE OVERVIEW:
+ * Handles the complete lifecycle of CGI Neural Assets including:
+ * - Initial DNA / Prompt generation via n8n
+ * - High-fidelity Image Rendering
+ * - Video Synthesis 
+ * - Corporate Branding Overlays (Image & Video via inline modal)
+ * - Social Media Broadcasting
+ * * * SECURITY & BILLING INTEGRATION:
+ * Fully integrated with the SaaS Credit/Wallet System. 
+ * Bypasses legacy Spatie permissions for asset generation in favor of real-time 
+ * database wallet deductions (`branding_image_credits`, `video_credits`, etc.)
+ */
 class CgiGenerationController extends Controller
 {
     /**
-     * Display the history of CGI directives.
+     * =========================================================================
+     * CORE PIPELINE: VIEW DIRECTIVES (INDEX)
+     * =========================================================================
+     * Retrieves the primary workspace for the user.
+     * Admins can view all generated assets across the platform.
+     * Regular users are scoped strictly to their own generation history.
      */
     public function index()
     {
-        // 1. The Security Gate
+        // 1. The Security Gate: Ensure the user has the exact clearance required to view the page.
         if (!auth()->user()->can('view_cgi_index')) {
             abort(403, 'SYSTEM ALERT: You lack clearance to access the Directive Studio.');
         }
 
-        // 2. Intelligent Data Scoping
+        // 2. Intelligent Data Scoping: Admins get global view, Users get scoped view.
         if (auth()->user()->role === 'admin') {
             $generations = CgiGeneration::latest()->get();
         } else {
@@ -38,10 +57,15 @@ class CgiGenerationController extends Controller
     }
 
     /**
-     * Show the form for creating a new directive.
+     * =========================================================================
+     * CORE PIPELINE: CREATE NEW DIRECTIVE (VIEW)
+     * =========================================================================
+     * Renders the input form for initiating a new CGI generation sequence.
+     * Pre-loads the user's historical asset library for rapid selection.
      */
     public function create()
     {
+        // Fetch historical assets for the asset library modal
         $productAssets = ProductAsset::where('user_id', auth()->id())
             ->latest()
             ->get();
@@ -50,14 +74,21 @@ class CgiGenerationController extends Controller
     }
 
     /**
-     * Process the form and trigger the initial prompt generation flow in n8n.
+     * =========================================================================
+     * CORE PIPELINE: INITIALIZE DIRECTIVE (STORE)
+     * =========================================================================
+     * Handles the initial product upload, deducts 1 Directive Prompt Credit,
+     * and triggers the n8n webhook to generate the DNA (prompts).
      */
     public function store(Request $request)
     {
         $user = auth()->user();
         $activeWallet = null;
 
-        // --- 1. SAAS GATEKEEPER ---
+        // ---------------------------------------------------------
+        // 1. SAAS GATEKEEPER & CREDIT AUTHORIZATION
+        // ---------------------------------------------------------
+        // Verify active subscription and deduct credits if applicable.
         if ($user->role !== 'admin') {
             $activeWallet = \App\Models\UserPackage::where('user_id', $user->id)
                 ->where('is_active_selection', 'true') 
@@ -68,15 +99,20 @@ class CgiGenerationController extends Controller
                 ->first();
 
             if (!$activeWallet) {
-                return redirect()->route('cgi.index')->with('error', 'You have no active package. Please activate or purchase a plan.');
+                return redirect()->route('cgi.index')
+                    ->with('error', 'You have no active package. Please activate or purchase a plan.');
             }
 
             if ($activeWallet->directive_credits < 1) {
-                return redirect()->route('cgi.index')->with('error', 'Insufficient Prompt Credits in your active wallet. Please refill.');
+                return redirect()->route('cgi.index')
+                    ->with('error', 'Insufficient Prompt Credits in your active wallet. Please refill.');
             }
         }
 
-        // --- 2. Validation (FIXED: Manual Validator stops the silent redirect bug) ---
+        // ---------------------------------------------------------
+        // 2. VALIDATION LAYER
+        // ---------------------------------------------------------
+        // Using manual Validator to intercept and return beautiful frontend Toast errors.
         $validator = Validator::make($request->all(), [
             'product_name'     => 'required|string|max:255',
             'product_image'    => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
@@ -89,7 +125,6 @@ class CgiGenerationController extends Controller
         ]);
 
         if ($validator->fails()) {
-            // Converts hidden validation errors into a visible frontend Toast!
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Form Error: ' . $validator->errors()->first());
@@ -97,16 +132,21 @@ class CgiGenerationController extends Controller
 
         $recordId = (string) Str::uuid();
 
-        // --- 3. Handle the Image Paths Securely ---
+        // ---------------------------------------------------------
+        // 3. SECURE FILE & ASSET HANDLING
+        // ---------------------------------------------------------
+        // Resolve the image path whether it's a fresh upload or a library selection.
         $imagePath = null;
         $localFilePath = null; 
         $fileName = null;
 
         if ($request->hasFile('product_image')) {
+            // Process fresh upload
             $imagePath = $request->file('product_image')->store('products', 'public');
             $localFilePath = storage_path('app/public/' . $imagePath);
             $fileName = $request->file('product_image')->getClientOriginalName();
             
+            // Save to Asset Library for future use
             ProductAsset::create([
                 'user_id' => $user->id,
                 'name' => pathinfo($fileName, PATHINFO_FILENAME), 
@@ -114,11 +154,13 @@ class CgiGenerationController extends Controller
             ]);
             
         } elseif ($request->filled('selected_asset_path')) {
+            // Process internal asset selection
             $imagePath = $request->input('selected_asset_path');
             $localFilePath = storage_path('app/public/' . $imagePath);
             $fileName = basename($imagePath);
             
         } elseif ($request->filled('previous_image_url')) {
+            // Process external URL selection (fallback)
             $fullUrl = $request->input('previous_image_url');
             $parsedUrl = parse_url($fullUrl, PHP_URL_PATH); 
             $pathParts = explode('storage/', $parsedUrl);
@@ -133,14 +175,17 @@ class CgiGenerationController extends Controller
                 ->with('error', 'You must upload a new product image or select one from your library.');
         }
 
-        // --- CRITICAL SAFETY CHECK ---
+        // CRITICAL SAFETY CHECK: Abort pipeline if physical file cannot be located.
         if (!$localFilePath || !file_exists($localFilePath)) {
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'System Error: Source image file could not be located on the server. Pipeline aborted.');
         }
 
-        // --- 4. Create initial record ---
+        // ---------------------------------------------------------
+        // 4. DATABASE INITIALIZATION
+        // ---------------------------------------------------------
+        // Create the core tracking record.
         CgiGeneration::create([
             'id'               => $recordId,
             'user_id'          => Auth::id(),
@@ -156,10 +201,14 @@ class CgiGenerationController extends Controller
             'image_status'     => 'processing',
         ]);
 
+        // Destination Webhook for Neural Prompts
         $webhookUrl = 'https://n8n.egeneration.co/webhook/eGStudio_spark';
 
         try {
-            // --- 5. CHAINED MULTIPART UPLOAD (Using fopen to prevent memory crashes) ---
+            // ---------------------------------------------------------
+            // 5. MULTIPART UPLOAD TRANSMISSION TO N8N
+            // ---------------------------------------------------------
+            // Using fopen to stream the file directly to n8n, preventing RAM spikes.
             $response = Http::withoutVerifying()
                 ->timeout(120)
                 ->attach('product_image', fopen($localFilePath, 'r'), $fileName)
@@ -174,7 +223,9 @@ class CgiGenerationController extends Controller
                     'lighting_style'   => $request->lighting_style,
                 ]);
 
-            // --- 6. CHECK FOR SUCCESS ---
+            // ---------------------------------------------------------
+            // 6. RESPONSE HANDLING & CREDIT DEDUCTION
+            // ---------------------------------------------------------
             if ($response->successful()) {
                 if ($user->role !== 'admin' && $activeWallet) {
                     $activeWallet->decrement('directive_credits');
@@ -200,68 +251,11 @@ class CgiGenerationController extends Controller
     }
 
     /**
-     * Trigger the second stage: Image Rendering Flow.
-     */
-    public function makePicture(Request $request, $id)
-    {
-        $user = auth()->user();
-        $activeWallet = null;
-
-        if ($user->role !== 'admin') {
-            $activeWallet = \App\Models\UserPackage::where('user_id', $user->id)
-                ->where('is_active_selection', 'true')
-                ->where(function ($query) { $query->whereNull('expires_at')->orWhere('expires_at', '>', now()); })->first();
-
-            if (!$activeWallet || $activeWallet->image_credits < 1) {
-                return response()->json(['success' => false, 'message' => 'Out of Image Credits. Please upgrade.'], 403);
-            }
-        }
-
-        $generation = CgiGeneration::where('id', (string)$id)
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
-
-        $generation->image_status = 'making';
-        $generation->save();
-
-        $webhookUrl = 'https://n8n.egeneration.co/webhook/eGStudio_MakePicture_spark'; 
-
-        try {
-            $publicImageUrl = str_starts_with($generation->product_image, 'http') 
-                ? $generation->product_image 
-                : asset('storage/' . $generation->product_image);
-
-            $response = Http::withoutVerifying()->timeout(120)->asJson()->post($webhookUrl, [
-                'id' => $generation->id,
-                'image_prompt' => $generation->image_prompt,
-                'negative_prompt' => $generation->negative_prompt,
-                'product_image' => $publicImageUrl
-            ]);
-
-            if ($response->successful()) {
-                if ($user->role !== 'admin' && $activeWallet) {
-                    $activeWallet->decrement('image_credits');
-                }
-
-                $msg = $response->json()['message'] ?? 'Image rendering started!';
-                return response()->json(['success' => true, 'new_status' => 'making', 'message' => $msg]);
-            } else {
-                $n8nError = $response->json()['message'] ?? 'Webhook rejected request (HTTP ' . $response->status() . ')';
-                $generation->update(['image_status' => 'failed']);
-                return response()->json(['success' => false, 'message' => 'Generation Failed: ' . $n8nError], 500);
-            }
-
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            $generation->update(['image_status' => 'failed']);
-            return response()->json(['success' => false, 'message' => 'Generation timed out. Please check back later.'], 500);
-        } catch (\Exception $e) {
-            $generation->update(['image_status' => 'processing']); 
-            return response()->json(['success' => false, 'message' => 'Connection failed. Credits not deducted.'], 500);
-        }
-    }
-
-    /**
-     * Update prompt content manually via the dashboard modals.
+     * =========================================================================
+     * CORE PIPELINE: MODIFY NEURAL PROMPTS
+     * =========================================================================
+     * Allows the user to manually override the AI-generated prompts before
+     * proceeding to the final render stage.
      */
     public function updatePrompts(Request $request, $id)
     {
@@ -285,12 +279,82 @@ class CgiGenerationController extends Controller
         return response()->json(['success' => false, 'message' => 'Database save failed.'], 500);
     }
 
-    public function destroy($id)
+    /**
+     * =========================================================================
+     * CORE PIPELINE: RENDER PRIMARY IMAGE
+     * =========================================================================
+     * Fires the secondary webhook to convert the validated prompts into
+     * a high-fidelity image output. Costs 1 Image Credit.
+     */
+    public function makePicture(Request $request, $id)
     {
-        CgiGeneration::where('id', $id)->where('user_id', Auth::id())->firstOrFail()->delete();
-        return redirect()->back()->with('success', 'Directive deleted.');
+        $user = auth()->user();
+        $activeWallet = null;
+
+        // Verify Image Credits
+        if ($user->role !== 'admin') {
+            $activeWallet = \App\Models\UserPackage::where('user_id', $user->id)
+                ->where('is_active_selection', 'true')
+                ->where(function ($query) { $query->whereNull('expires_at')->orWhere('expires_at', '>', now()); })->first();
+
+            if (!$activeWallet || $activeWallet->image_credits < 1) {
+                return response()->json(['success' => false, 'message' => 'Out of Image Credits. Please upgrade.'], 403);
+            }
+        }
+
+        $generation = CgiGeneration::where('id', (string)$id)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        // Lock the row to 'making' state
+        $generation->image_status = 'making';
+        $generation->save();
+
+        $webhookUrl = 'https://n8n.egeneration.co/webhook/eGStudio_MakePicture_spark'; 
+
+        try {
+            // Determine public accessibility of the source image mask
+            $publicImageUrl = str_starts_with($generation->product_image, 'http') 
+                ? $generation->product_image 
+                : asset('storage/' . $generation->product_image);
+
+            // Dispatch generation payload
+            $response = Http::withoutVerifying()->timeout(120)->asJson()->post($webhookUrl, [
+                'id' => $generation->id,
+                'image_prompt' => $generation->image_prompt,
+                'negative_prompt' => $generation->negative_prompt,
+                'product_image' => $publicImageUrl
+            ]);
+
+            if ($response->successful()) {
+                if ($user->role !== 'admin' && $activeWallet) {
+                    $activeWallet->decrement('image_credits');
+                }
+
+                $msg = $response->json()['message'] ?? 'Image rendering started!';
+                return response()->json(['success' => true, 'new_status' => 'making', 'message' => $msg]);
+            } else {
+                $n8nError = $response->json()['message'] ?? 'Webhook rejected request';
+                $generation->update(['image_status' => 'failed']);
+                return response()->json(['success' => false, 'message' => 'Generation Failed: ' . $n8nError], 500);
+            }
+
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            $generation->update(['image_status' => 'failed']);
+            return response()->json(['success' => false, 'message' => 'Generation timed out. Please check back later.'], 500);
+        } catch (\Exception $e) {
+            $generation->update(['image_status' => 'processing']); 
+            return response()->json(['success' => false, 'message' => 'Connection failed. Credits not deducted.'], 500);
+        }
     }
 
+    /**
+     * =========================================================================
+     * CORE PIPELINE: RENDER VIDEO
+     * =========================================================================
+     * Takes the finalized generated image and converts it into a moving 
+     * cinematic sequence using the secondary prompt. Costs 1 Video Credit.
+     */
     public function makeVideo(Request $request, $id)
     {
         $user = auth()->user();
@@ -346,7 +410,7 @@ class CgiGenerationController extends Controller
                 $msg = $response->json()['message'] ?? 'Video generation sequence initiated!';
                 return response()->json(['success' => true, 'message' => $msg]);
             } else {
-                $n8nError = $response->json()['message'] ?? 'Webhook rejected request (HTTP ' . $response->status() . ')';
+                $n8nError = $response->json()['message'] ?? 'Webhook rejected request';
                 $generation->update(['video_status' => 'failed']);
                 return response()->json(['success' => false, 'message' => 'Video Generation Failed: ' . $n8nError], 500);
             }
@@ -360,109 +424,172 @@ class CgiGenerationController extends Controller
         }
     }
 
-    public function videoGallery()
-    {
-        $videos = CgiGeneration::where('user_id', Auth::id())
-            ->where(function($query) {
-                $query->whereNotNull('video_url')
-                      ->orWhereNotNull('branded_video_url');
-            })
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return view('cgi.gallery', compact('videos'));
-    }
-
-    public function imageGallery()
-    {
-        $images = CgiGeneration::where('user_id', Auth::id())
-            ->where(function($query) {
-                $query->whereNotNull('image_url')
-                      ->orWhereNotNull('branded_image_url');
-            })
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return view('cgi.image-gallery', compact('images'));
-    }
-
-    public function applyBranding(Request $request)
+    /**
+     * =========================================================================
+     * BRANDING PIPELINE: OVERLAY LOGO ON IMAGE
+     * =========================================================================
+     * Receives a user-uploaded logo from the inline modal and transmits it
+     * securely via multipart/form-data to n8n. Costs 1 Image Brand Credit.
+     */
+    public function applyBrandingImage(Request $request)
     {
         $user = auth()->user();
         $activeWallet = null;
-        
+
+        // Requires a Logo upload from the Frontend modal!
+        $request->validate([
+            'id' => 'required|exists:cgi_generations,id',
+            'logo' => 'required|image|mimes:png,jpg,jpeg,svg|max:5120',
+        ]);
+
         if ($user->role !== 'admin') {
-            if (!$user->can('apply_branding')) {
-                return response()->json(['success' => false, 'message' => 'Your security clearance does not allow neural branding.'], 403);
-            }
+            
+            // Legacy Permission Check REMOVED. Relying strictly on Wallet balances.
 
             $activeWallet = \App\Models\UserPackage::with('package')->where('user_id', $user->id)
                 ->where('is_active_selection', 'true')
                 ->where(function ($query) { $query->whereNull('expires_at')->orWhere('expires_at', '>', now()); })->first();
 
-            if (!$activeWallet || !$activeWallet->package || $activeWallet->package->branding_allowance <= 0) {
-                return response()->json(['success' => false, 'message' => 'Your current package does not allow custom branding.'], 403);
+            // Fallback validation against the package allowance configuration
+            if (!$activeWallet || !$activeWallet->package || $activeWallet->package->branding_image_allowance <= 0) {
+                return response()->json(['success' => false, 'message' => 'Your current package does not allow custom image branding.'], 403);
             }
 
-            if ($activeWallet->branding_credits < 1) {
-                return response()->json(['success' => false, 'message' => 'Out of Branding Credits. Please upgrade.'], 403);
+            // Real-time Database Wallet Check
+            if ($activeWallet->branding_image_credits < 1) {
+                return response()->json(['success' => false, 'message' => 'Out of Image Branding Credits. Please Top-up.'], 403);
             }
         }
-
-        $request->validate([
-            'id' => 'required|exists:cgi_generations,id',
-            'logo' => 'required|image|mimes:png,jpg,jpeg,svg|max:5120', 
-        ]);
 
         $generation = CgiGeneration::where('id', $request->id)
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
-        $generation->update([
-            'image_status' => 'making',
-            'video_status' => 'making'
-        ]);
+        if (!$generation->image_url) {
+            return response()->json(['success' => false, 'message' => 'No original image exists to brand.'], 400);
+        }
 
-        $webhookUrl = 'https://n8n.egeneration.co/webhook/eGStudio_ApplyBranding_spark';
+        // Lock UI to processing state
+        $generation->update(['image_status' => 'making']);
+
+        $webhookUrl = 'https://n8n.egeneration.co/webhook/eGStudio_ApplyBranding_image_spark';
 
         try {
             $publicImageUrl = str_starts_with($generation->image_url, 'http') ? $generation->image_url : asset('storage/' . $generation->image_url);
-            $publicVideoUrl = str_starts_with($generation->video_url, 'http') ? $generation->video_url : asset('storage/' . $generation->video_url);
 
+            // Upload the logo to n8n directly using multipart stream
             $response = Http::withoutVerifying()->timeout(120)
-                ->attach(
-                    'logo', 
-                    fopen($request->file('logo')->getRealPath(), 'r'),
-                    $request->file('logo')->getClientOriginalName()
-                )
+                ->attach('logo', fopen($request->file('logo')->getRealPath(), 'r'), $request->file('logo')->getClientOriginalName())
                 ->post($webhookUrl, [
                     'id' => $generation->id,
                     'image_url' => $publicImageUrl,
-                    'video_url' => $publicVideoUrl,
                 ]);
 
             if ($response->successful()) {
+                // Deduct specific Branding Image Credit from Wallet
                 if ($user->role !== 'admin' && $activeWallet) {
-                    $activeWallet->decrement('branding_credits');
+                    $activeWallet->decrement('branding_image_credits');
                 }
-
-                $msg = $response->json()['message'] ?? 'Branding pipeline initiated!';
+                
+                $msg = $response->json()['message'] ?? 'Image branding pipeline initiated successfully!';
                 return response()->json(['success' => true, 'message' => $msg]);
             } else {
                 $n8nError = $response->json()['message'] ?? 'n8n processing failed (HTTP ' . $response->status() . ')';
-                $generation->update(['image_status' => 'completed', 'video_status' => 'completed']);
+                $generation->update(['image_status' => 'completed']);
                 return response()->json(['success' => false, 'message' => 'Branding Failed: ' . $n8nError], 500);
             }
-
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            $generation->update(['image_status' => 'completed', 'video_status' => 'completed']);
-            return response()->json(['success' => false, 'message' => 'Branding timed out. Please try again.'], 500);
         } catch (\Exception $e) {
-            $generation->update(['image_status' => 'completed', 'video_status' => 'completed']);
+            $generation->update(['image_status' => 'completed']);
             return response()->json(['success' => false, 'message' => 'Branding engine offline. Credits not deducted.'], 500);
         }
     }
 
+    /**
+     * =========================================================================
+     * BRANDING PIPELINE: OVERLAY LOGO ON VIDEO
+     * =========================================================================
+     * Receives a user-uploaded logo from the inline modal and transmits it
+     * securely via multipart/form-data to n8n. Costs 1 Video Brand Credit.
+     */
+    public function applyBrandingVideo(Request $request)
+    {
+        $user = auth()->user();
+        $activeWallet = null;
+
+        // Requires a Logo upload from the Frontend modal!
+        $request->validate([
+            'id' => 'required|exists:cgi_generations,id',
+            'logo' => 'required|image|mimes:png,jpg,jpeg,svg|max:5120',
+        ]);
+
+        if ($user->role !== 'admin') {
+            
+            // Legacy Permission Check REMOVED. Relying strictly on Wallet balances.
+
+            $activeWallet = \App\Models\UserPackage::with('package')->where('user_id', $user->id)
+                ->where('is_active_selection', 'true')
+                ->where(function ($query) { $query->whereNull('expires_at')->orWhere('expires_at', '>', now()); })->first();
+
+            // Fallback validation against the package allowance configuration
+            if (!$activeWallet || !$activeWallet->package || $activeWallet->package->branding_video_allowance <= 0) {
+                return response()->json(['success' => false, 'message' => 'Your current package does not allow custom video branding.'], 403);
+            }
+
+            // Real-time Database Wallet Check
+            if ($activeWallet->branding_video_credits < 1) {
+                return response()->json(['success' => false, 'message' => 'Out of Video Branding Credits. Please Top-up.'], 403);
+            }
+        }
+
+        $generation = CgiGeneration::where('id', $request->id)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        if (!$generation->video_url) {
+            return response()->json(['success' => false, 'message' => 'No video exists to brand.'], 400);
+        }
+
+        // Lock UI to processing state
+        $generation->update(['video_status' => 'making']);
+
+        $webhookUrl = 'https://n8n.egeneration.co/webhook/eGStudio_ApplyBranding_video_spark';
+
+        try {
+            $publicVideoUrl = str_starts_with($generation->video_url, 'http') ? $generation->video_url : asset('storage/' . $generation->video_url);
+
+            // Upload the logo to n8n directly using multipart stream
+            $response = Http::withoutVerifying()->timeout(120)
+                ->attach('logo', fopen($request->file('logo')->getRealPath(), 'r'), $request->file('logo')->getClientOriginalName())
+                ->post($webhookUrl, [
+                    'id' => $generation->id,
+                    'video_url' => $publicVideoUrl,
+                ]);
+
+            if ($response->successful()) {
+                // Deduct specific Branding Video Credit from Wallet
+                if ($user->role !== 'admin' && $activeWallet) {
+                    $activeWallet->decrement('branding_video_credits');
+                }
+                
+                $msg = $response->json()['message'] ?? 'Video branding pipeline initiated successfully!';
+                return response()->json(['success' => true, 'message' => $msg]);
+            } else {
+                $n8nError = $response->json()['message'] ?? 'n8n processing failed (HTTP ' . $response->status() . ')';
+                $generation->update(['video_status' => 'completed']);
+                return response()->json(['success' => false, 'message' => 'Branding Failed: ' . $n8nError], 500);
+            }
+        } catch (\Exception $e) {
+            $generation->update(['video_status' => 'completed']);
+            return response()->json(['success' => false, 'message' => 'Branding engine offline. Credits not deducted.'], 500);
+        }
+    }
+
+    /**
+     * =========================================================================
+     * SOCIAL BROADCAST PIPELINE
+     * =========================================================================
+     * Transmits the finalized media asset directly to social media platforms.
+     */
     public function publishToSocial(Request $request, $id)
     {
         $user = auth()->user();
@@ -518,7 +645,6 @@ class CgiGenerationController extends Controller
 
             if ($response->successful()) {
                 
-                // === THE FIX IS HERE! Update to 'published' and record the timestamp ===
                 $socialPost->update([
                     'status' => 'published',
                     'published_at' => now()
@@ -546,8 +672,37 @@ class CgiGenerationController extends Controller
     }
 
     /**
-     * Display the user's social media posting history.
+     * =========================================================================
+     * GALLERIES, HISTORY & CLEANUP
+     * =========================================================================
+     * Helper routes for viewing historical generated assets.
      */
+    public function videoGallery()
+    {
+        $videos = CgiGeneration::where('user_id', Auth::id())
+            ->where(function($query) {
+                $query->whereNotNull('video_url')
+                      ->orWhereNotNull('branded_video_url');
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('cgi.gallery', compact('videos'));
+    }
+
+    public function imageGallery()
+    {
+        $images = CgiGeneration::where('user_id', Auth::id())
+            ->where(function($query) {
+                $query->whereNotNull('image_url')
+                      ->orWhereNotNull('branded_image_url');
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('cgi.image-gallery', compact('images'));
+    }
+
     public function postHistory()
     {
         $posts = CgiSocialPost::with('generation')
@@ -558,5 +713,11 @@ class CgiGenerationController extends Controller
             ->get();
 
         return view('cgi.post-history', compact('posts'));
+    }
+
+    public function destroy($id)
+    {
+        CgiGeneration::where('id', $id)->where('user_id', Auth::id())->firstOrFail()->delete();
+        return redirect()->back()->with('success', 'Directive deleted permanently.');
     }
 }

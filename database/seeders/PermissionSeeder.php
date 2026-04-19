@@ -17,7 +17,8 @@ class PermissionSeeder extends Seeder
             'access_cgi_generator',   // Can see the "New Directive" creation page
             'generate_images',        // Can spend credits/API to make images
             'generate_videos',        // Can spend credits/API to make videos
-            'apply_branding',         // Can overlay logo on assets
+            'apply_branding_image',   // Can overlay logo on images
+            'apply_branding_video',   // Can overlay logo on videos
             'view_branded_assets',    // Can see branded versions of assets
             
             // --- IMAGE GALLERY ---

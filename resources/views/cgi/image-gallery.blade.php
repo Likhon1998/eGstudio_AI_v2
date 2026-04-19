@@ -21,7 +21,66 @@
     </div>
 
     {{-- Main Workspace --}}
-    <div class="max-w-full mx-auto bg-[#050505] min-h-screen flex flex-col" x-data="{ openModal: false, currentImage: '', filter: 'all' }">
+    <div class="max-w-full mx-auto bg-[#050505] min-h-screen flex flex-col" 
+         x-data="{ 
+            openModal: false, 
+            currentImage: '', 
+            filter: 'all',
+            
+            async forceDownload(url, filename) {
+                $dispatch('notify', { message: 'Preparing Download...', type: 'info' });
+
+                // 1. THE ABSOLUTE FIX FOR CLOUDINARY
+                // Inject 'fl_attachment' to force the browser to download directly, skipping CORS issues.
+                if (url.includes('cloudinary.com')) {
+                    let dlUrl = url;
+                    if (dlUrl.includes('/upload/')) {
+                        dlUrl = dlUrl.replace('/upload/', '/upload/fl_attachment/');
+                    } else if (dlUrl.includes('/fetch/')) {
+                        dlUrl = dlUrl.replace('/fetch/', '/fetch/fl_attachment/');
+                    }
+                    
+                    const link = document.createElement('a');
+                    link.href = dlUrl;
+                    link.setAttribute('download', filename || 'neural-asset.png');
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    $dispatch('notify', { message: 'Download Initiated', type: 'success' });
+                    return;
+                }
+
+                // 2. FOR LOCAL SERVER FILES (NON-CLOUDINARY)
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Network error');
+                    const blob = await response.blob();
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = filename || 'neural-asset.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(blobUrl);
+                    $dispatch('notify', { message: 'Download Initiated', type: 'success' });
+
+                } catch (e) {
+                    // 3. NO PREVIEWS ALLOWED
+                    // If fetch fails, we still force a silent link click with the 'download' attribute.
+                    // We completely removed window.open() so it never opens a preview tab.
+                    console.error('Fetch failed, forcing hard download link', e);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', filename || 'neural-asset.png');
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    $dispatch('notify', { message: 'Download Forced', type: 'info' });
+                }
+            }
+         }">
         
         {{-- Header & Filter Toolbar --}}
         <div class="flex flex-col md:flex-row items-center justify-between px-8 py-6 border-b border-white/5 bg-[#0a0a0a] gap-4">
@@ -84,7 +143,10 @@
                                 <h3 class="text-[12px] font-black text-white uppercase tracking-wider truncate">{{ $image->product_name }}</h3>
                                 <div class="flex justify-between items-center pt-4 border-t border-white/5 mt-4">
                                     <span class="text-[9px] font-black text-gray-500 uppercase tracking-widest">Neural Asset</span>
-                                    <a href="{{ str_starts_with($image->image_url, 'http') ? $image->image_url : asset('storage/' . $image->image_url) }}" download @click.stop class="text-gray-600 hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></a>
+                                    <button @click.stop="forceDownload('{{ str_starts_with($image->image_url, 'http') ? $image->image_url : asset('storage/' . $image->image_url) }}', 'raw-{{ $image->id }}.png')" 
+                                            class="text-gray-600 hover:text-white transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -96,7 +158,7 @@
                         <div x-show="filter === 'all' || filter === 'branded'" 
                              x-transition:enter="transition ease-out duration-300"
                              class="group bg-[#0a0a0a] border border-emerald-500/10 rounded-2xl overflow-hidden shadow-2xl transition-all hover:border-emerald-500/40">
-                             <!-- ... (rest of the card content) ... -->
+                             
                             <div class="relative aspect-square bg-black cursor-pointer overflow-hidden" 
                                 @click="openModal = true; currentImage = '{{ str_starts_with($image->branded_image_url, 'http') ? $image->branded_image_url : asset('storage/' . $image->branded_image_url) }}'; $dispatch('notify', {message: 'Enlarging Branded Still', type: 'info'})">
                                 <img src="{{ str_starts_with($image->branded_image_url, 'http') ? $image->branded_image_url : asset('storage/' . $image->branded_image_url) }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-500">
@@ -108,7 +170,10 @@
                                 <h3 class="text-[12px] font-black text-white uppercase tracking-wider truncate">{{ $image->product_name }}</h3>
                                 <div class="flex justify-between items-center pt-4 border-t border-white/5 mt-4">
                                     <span class="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Master Still</span>
-                                    <a href="{{ str_starts_with($image->branded_image_url, 'http') ? $image->branded_image_url : asset('storage/' . $image->branded_image_url) }}" download @click.stop class="text-gray-600 hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></a>
+                                    <button @click.stop="forceDownload('{{ str_starts_with($image->branded_image_url, 'http') ? $image->branded_image_url : asset('storage/' . $image->branded_image_url) }}', 'branded-{{ $image->id }}.png')" 
+                                            class="text-gray-600 hover:text-white transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                    </button>
                                 </div>
                             </div>
                         </div>

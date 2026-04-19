@@ -28,7 +28,8 @@ class PackageController extends Controller
             'directive_allowance' => 'required|integer|min:0',
             'image_allowance' => 'required|integer|min:0',
             'video_allowance' => 'required|integer|min:0',
-            'branding_allowance' => 'required|integer|min:0',
+            'branding_image_allowance' => 'required|integer|min:0',
+            'branding_video_allowance' => 'required|integer|min:0',
             'social_post_allowance' => 'required|integer|min:0',
         ]);
 
@@ -94,7 +95,8 @@ class PackageController extends Controller
             'directive_credits'   => $package->directive_allowance,
             'image_credits'       => $package->image_allowance,
             'video_credits'       => $package->video_allowance,
-            'branding_credits'    => $package->branding_allowance,
+            'branding_image_credits' => $package->branding_image_allowance,
+            'branding_video_credits' => $package->branding_video_allowance,
             'social_post_credits' => $package->social_post_allowance,
             'expires_at'          => $expiry,
             'is_active_selection' => !$hasActiveWallets ? 'true' : 'false', 
@@ -127,7 +129,8 @@ class PackageController extends Controller
             'directive_allowance'   => 'required|integer|min:0',
             'image_allowance'       => 'required|integer|min:0',
             'video_allowance'       => 'required|integer|min:0',
-            'branding_allowance'    => 'required|integer|min:0',
+            'branding_image_allowance' => 'required|integer|min:0',
+            'branding_video_allowance' => 'required|integer|min:0',
             'social_post_allowance' => 'required|integer|min:0',
         ]);
 

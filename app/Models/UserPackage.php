@@ -21,6 +21,8 @@ class UserPackage extends Model
         'image_credits',
         'video_credits',
         'branding_credits',
+        'branding_image_credits',
+        'branding_video_credits',
         'social_post_credits',
         'expires_at',
     ];
