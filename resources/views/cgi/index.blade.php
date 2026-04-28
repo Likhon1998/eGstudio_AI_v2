@@ -127,6 +127,8 @@
 
                                     imageStatus: '{{ $gen->image_url ? 'completed' : $gen->image_status }}',
                                     videoStatus: '{{ $gen->video_url ? 'completed' : ($gen->video_status ?? 'pending') }}',
+                                    videoErrorMessage: @js($gen->video_error_message ?? ''),
+
                                     openModal: null, isEditing: false, isSaving: false, isTriggering: false, isVideoTriggering: false,
                                     liveImagePrompt: @js($gen->image_prompt),
 
@@ -227,6 +229,11 @@
                                         if (this.isBrandingImage && !this.brandedImageUrl) loading = true;
                                         if (this.isBrandingVideo && !this.brandedVideoUrl) loading = true;
                                         
+                                        // Auto-reload disabled if failed state is caught
+                                        if (this.videoStatus === 'failed') {
+                                            loading = false;
+                                        }
+
                                         if (loading) {
                                             setTimeout(() => { location.reload(); }, 5000);
                                         }
@@ -306,6 +313,7 @@
                                             const data = await response.json();
                                             if(data.success) { 
                                                 this.videoStatus = 'making';
+                                                this.videoErrorMessage = ''; // clear error state
                                                 $dispatch('notify', { message: 'Video Synthesis Started', type: 'info' });
                                                 this.checkAndReload();
                                             }
@@ -469,21 +477,29 @@
                                                 {{-- VIDEO RENDERING CONTROLS --}}
                                                 <div class="flex flex-wrap items-center gap-2 mt-1">
                                                     
-                                                    {{-- Make/View Video --}}
+                                                    {{-- Make/View/Retry Video --}}
                                                     @can('generate_videos')
                                                         <button
                                                             @click="if(!videoUrl && !hasVideoCredits) { $dispatch('notify', {message: 'Insufficient Video Credits! Please upgrade plan.', type: 'error'}); return; }; videoUrl ? (switchModal('videoPreview'), activePreviewUrl=videoUrl) : triggerMakeVideo()"
-                                                            :disabled="videoStatus==='making' || isVideoTriggering || !imageUrl || (!videoUrl && !hasVideoCredits)"
+                                                            :disabled="videoStatus==='making' || isVideoTriggering || !imageUrl || (!videoUrl && !hasVideoCredits && videoStatus !== 'failed')"
                                                             class="h-8 px-3 text-[9px] font-black rounded transition-all uppercase tracking-widest flex items-center gap-1.5 border disabled:opacity-10 shadow-lg"
                                                             :class="{
+                                                                    'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-600 hover:text-white shadow-red-500/10': videoStatus === 'failed' && !videoUrl,
                                                                     'bg-pink-500 border-pink-500 text-black animate-pulse shadow-[0_0_15px_rgba(236,72,153,0.4)]': videoStatus === 'making' && !videoUrl,
                                                                     'bg-pink-500/10 border-pink-500/20 text-pink-400 hover:bg-pink-500 hover:text-white shadow-pink-500/10': videoUrl,
-                                                                    'bg-[#1a1a1a] text-gray-300 border-white/10 hover:bg-white hover:text-black': !videoUrl && videoStatus !== 'making' && hasVideoCredits,
-                                                                    'bg-white/5 border-white/10 text-gray-600 cursor-not-allowed': !videoUrl && videoStatus !== 'making' && !hasVideoCredits
+                                                                    'bg-[#1a1a1a] text-gray-300 border-white/10 hover:bg-white hover:text-black': !videoUrl && videoStatus !== 'making' && videoStatus !== 'failed' && hasVideoCredits,
+                                                                    'bg-white/5 border-white/10 text-gray-600 cursor-not-allowed': !videoUrl && videoStatus !== 'making' && videoStatus !== 'failed' && !hasVideoCredits
                                                                 }">
                                                             <span
-                                                                x-text="(videoStatus==='making' && !videoUrl) ? 'SYNTHESIZING...' : (videoUrl ? 'View Video' : (hasVideoCredits ? 'Make Video' : '0 Credits'))"></span>
+                                                                x-text="videoStatus === 'failed' && !videoUrl ? 'RETRY VIDEO' : ((videoStatus==='making' && !videoUrl) ? 'SYNTHESIZING...' : (videoUrl ? 'View Video' : (hasVideoCredits ? 'Make Video' : '0 Credits')))"></span>
                                                         </button>
+                                                        
+                                                        {{-- FAILED STATUS INDICATOR / ERROR VIEWER --}}
+                                                        <template x-if="videoStatus === 'failed' && !videoUrl">
+                                                            <button @click="switchModal('videoError')" class="h-8 px-2.5 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-600 hover:text-white rounded transition-all shadow-lg flex items-center justify-center group" title="View Error Details">
+                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                                            </button>
+                                                        </template>
                                                     @endcan
                                                     
                                                     {{-- ========================================================
@@ -552,7 +568,38 @@
                                                 class="fixed inset-0 z-[999] flex items-center justify-center p-4 sm:p-6 bg-black/95 backdrop-blur-md"
                                                 x-cloak>
 
-
+                                                {{-- ========================================================
+                                                     NEW MODAL: VIDEO ERROR VIEWER 
+                                                     ======================================================== --}}
+                                                <div x-show="openModal === 'videoError'"
+                                                     class="bg-[#0a0a0a] border border-red-500/30 w-full max-w-md rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200"
+                                                     @click.away="closeModal()">
+                                                    <div class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-red-500/5">
+                                                        <h3 class="text-[10px] font-black text-red-400 uppercase tracking-[0.3em] flex items-center gap-2">
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                                            Video Generation Error
+                                                        </h3>
+                                                        <button @click="closeModal()" class="text-gray-500 hover:text-white text-lg">✕</button>
+                                                    </div>
+                                                    <div class="p-6 bg-black/40">
+                                                        <div class="flex items-start gap-4">
+                                                            <div class="bg-red-500/10 p-3 rounded-full border border-red-500/20">
+                                                                <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                            </div>
+                                                            <div>
+                                                                <h4 class="text-white text-sm font-bold mb-1 tracking-wide">Pipeline Terminated</h4>
+                                                                <p class="text-gray-400 text-xs leading-relaxed mb-3">Google's Generative AI engine encountered a critical error during synthesis. Details are provided below:</p>
+                                                                <div class="bg-[#111] border border-white/5 p-3 rounded-lg">
+                                                                    <p class="text-red-400 text-[11px] font-mono leading-relaxed break-words" x-text="videoErrorMessage || 'Internal Server Error. The AI node failed to respond.'"></p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="px-6 py-4 border-t border-white/5 bg-white/[0.01] flex justify-end gap-3">
+                                                        <button @click="closeModal()" class="px-5 py-2 text-gray-400 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors">Dismiss</button>
+                                                        <button @click="triggerMakeVideo(); closeModal()" class="px-5 py-2.5 bg-red-600 text-white rounded text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-colors shadow-lg shadow-red-600/20">Retry Synthesis</button>
+                                                    </div>
+                                                </div>
 
                                                 {{-- DETAILS MODAL (New User Settings View) --}}
 

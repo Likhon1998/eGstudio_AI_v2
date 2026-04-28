@@ -151,4 +151,4 @@
     <style>
         [x-cloak] { display: none !important; }
     </style>
-</x-app-layout>00
+</x-app-layout>

@@ -33,7 +33,8 @@ class CgiGeneration extends Model
         'image_url',
         'video_url',
         'branded_image_url',
-        'branded_video_url'
+        'branded_video_url',
+        'video_error_message'
     ];
 
     public function user()

@@ -374,7 +374,11 @@ class CgiGenerationController extends Controller
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
-        $generation->update(['video_status' => 'making']);
+        // [UPDATE 1]: Set to making and CLEAR any previous errors
+        $generation->update([
+            'video_status' => 'making',
+            'video_error_message' => null
+        ]);
 
         $webhookUrl = 'https://n8n.egeneration.co/webhook/video_generation_spark'; 
 
@@ -411,15 +415,28 @@ class CgiGenerationController extends Controller
                 return response()->json(['success' => true, 'message' => $msg]);
             } else {
                 $n8nError = $response->json()['message'] ?? 'Webhook rejected request';
-                $generation->update(['video_status' => 'failed']);
+                
+                // [UPDATE 2]: Save immediate webhook rejections to the database
+                $generation->update([
+                    'video_status' => 'failed',
+                    'video_error_message' => 'Webhook Error: ' . $n8nError
+                ]);
                 return response()->json(['success' => false, 'message' => 'Video Generation Failed: ' . $n8nError], 500);
             }
 
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            $generation->update(['video_status' => 'failed']);
+            // [UPDATE 3]: Save timeout errors to the database
+            $generation->update([
+                'video_status' => 'failed',
+                'video_error_message' => 'Connection timed out. Please check back later.'
+            ]);
             return response()->json(['success' => false, 'message' => 'Generation timed out. Please check back later.'], 500);
         } catch (\Exception $e) {
-            $generation->update(['video_status' => 'processing']); 
+            // [UPDATE 4]: Changed status from 'processing' to 'failed' to prevent infinite spinners
+            $generation->update([
+                'video_status' => 'failed', 
+                'video_error_message' => 'Pipeline Connection Failed: ' . $e->getMessage()
+            ]); 
             return response()->json(['success' => false, 'message' => 'Pipeline Connection Failed. Credits not deducted.'], 500);
         }
     }
