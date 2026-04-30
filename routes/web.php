@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminCgiAuditController;
 use App\Http\Controllers\Admin\PackageController;
+use App\Http\Controllers\Auth\OtpResetController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\LogoController;
 use App\Http\Controllers\PricingController;
@@ -12,19 +14,30 @@ use App\Models\CgiGeneration;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
+// === OCCASION CONTROLLERS ===
+use App\Http\Controllers\OccasionController;
+use App\Http\Controllers\Admin\OccasionPlanController;
+use App\Http\Controllers\Admin\AdminOccasionPackageController;
+
 Route::redirect('/', '/login');
 
-// Updated Dashboard Route (Regular Users)
+// Dashboard Route (Regular Users)
 Route::get('/dashboard', function () {
     $generations = CgiGeneration::where('user_id', Auth::id())->get();
     return view('dashboard', ['generations' => $generations]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+
 Route::middleware('auth')->group(function () {
+    
+    // User Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    // ==========================================
+    // 1. CORE CGI STUDIO PIPELINE
+    // ==========================================
     Route::get('/cgi/create', [CgiGenerationController::class, 'create'])->name('cgi.create');
     Route::post('/cgi/store', [CgiGenerationController::class, 'store'])->name('cgi.store');
     Route::get('/cgi', [CgiGenerationController::class, 'index'])->name('cgi.index');
@@ -40,10 +53,23 @@ Route::middleware('auth')->group(function () {
     Route::post('/cgi/{id}/publish', [CgiGenerationController::class, 'publishToSocial'])->name('cgi.publish');
     Route::get('/cgi/post-history', [CgiGenerationController::class, 'postHistory'])->name('cgi.post_history');
     
+    // ==========================================
+    // 2. NEW: OCCASION STUDIO PIPELINE
+    // ==========================================
+    Route::prefix('occasions')->name('occasions.')->group(function () {
+        Route::get('/', [OccasionController::class, 'index'])->name('index');
+        Route::get('/create', [OccasionController::class, 'create'])->name('create');
+        Route::post('/store', [OccasionController::class, 'store'])->name('store');
+        Route::post('/{occasion}/make-picture', [OccasionController::class, 'makePicture'])->name('makePicture');
+        Route::post('/{occasion}/make-video', [OccasionController::class, 'makeVideo'])->name('makeVideo');
+        Route::delete('/{occasion}', [OccasionController::class, 'destroy'])->name('destroy');
+    });
+
     // Brand Logo Library
     Route::get('/logos', [LogoController::class, 'index'])->name('logos.index');
     Route::post('/logos', [LogoController::class, 'store'])->name('logos.store');
     Route::delete('/logos/{logo}', [LogoController::class, 'destroy'])->name('logos.destroy');
+    
     // SaaS User Billing & Pricing
     Route::get('/pricing', [PricingController::class, 'index'])->name('pricing.index');
     Route::post('/pricing/select/{id}', [PricingController::class, 'selectPackage'])->name('pricing.select');
@@ -53,47 +79,57 @@ Route::middleware('auth')->group(function () {
     Route::post('/billing/{id}/proof', [BillingController::class, 'submitProof'])->name('billing.submitProof');
     Route::post('/billing/wallet/{id}/switch', [BillingController::class, 'switchWallet'])->name('billing.wallet.switch');
 
+    // Assets
     Route::resource('assets', ProductAssetController::class);
-    
 });
 
-// --- ADMIN ROUTES (Unified Group) ---
+
+// ==========================================
+// 3. ADMIN SECURE ROUTES
+// ==========================================
 Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
     
-    // Admin Dashboard
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     
-    // User Management
+    // User & Agent Management
     Route::get('/users', [AdminController::class, 'indexUsers'])->name('users.index');
     Route::get('/users/create', [AdminController::class, 'createUser'])->name('users.create');
     Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
     Route::delete('/users/{id}', [AdminController::class, 'destroyUser'])->name('users.destroy');
+    Route::post('/users/{id}/top-up', [AdminController::class, 'topUpCredits'])->name('users.top_up');
+    Route::post('/users/{user}/activate-tier', [AdminController::class, 'activateTier'])->name('users.activate_tier');
     
+    // Assign Occasion Plan directly to User
+    Route::post('/users/{user}/assign-occasion-package', [AdminOccasionPackageController::class, 'assignPackage'])->name('users.assign_occasion_package');
+
     // Role Management
     Route::get('/roles', [AdminController::class, 'indexRoles'])->name('roles.index');
     Route::get('/roles/create', [AdminController::class, 'createRole'])->name('roles.create');
     Route::post('/roles', [AdminController::class, 'storeRole'])->name('roles.store');
     Route::get('/roles/{id}/edit', [AdminController::class, 'editRole'])->name('roles.edit');
     Route::put('/roles/{id}', [AdminController::class, 'updateRole'])->name('roles.update');
-    Route::post('/users/{id}/top-up', [AdminController::class, 'topUpCredits'])->name('users.top_up');
-    Route::get('/credit-logs', [AdminController::class, 'creditLogs'])->name('credit_logs');
-    // FIXED: Removed the extra '/admin' and 'admin.' since they are automatically applied by the group!
-    Route::post('/users/{user}/activate-tier', [AdminController::class, 'activateTier'])
-        ->name('users.activate_tier');
     
-    // SaaS Packages
+    // Credit Logs
+    Route::get('/credit-logs', [AdminController::class, 'creditLogs'])->name('credit_logs');
+    
+    // SaaS Master Templates (CGI Studio)
     Route::get('/packages', [PackageController::class, 'index'])->name('packages.index');
     Route::post('/packages', [PackageController::class, 'store'])->name('packages.store');
     Route::delete('/packages/{package}', [PackageController::class, 'destroy'])->name('packages.destroy');
-    Route::get('packages/{id}/edit', [PackageController::class, 'edit'])->name('packages.edit');
-    Route::put('packages/{id}', [PackageController::class, 'update'])->name('packages.update');
+    Route::get('/packages/{id}/edit', [PackageController::class, 'edit'])->name('packages.edit');
+    Route::put('/packages/{id}', [PackageController::class, 'update'])->name('packages.update');
 
+    // SaaS Master Templates (Occasion Studio)
+    Route::get('/occasion-plans', [OccasionPlanController::class, 'index'])->name('occasion_plans.index');
+    Route::post('/occasion-plans', [OccasionPlanController::class, 'store'])->name('occasion_plans.store');
+    Route::get('/occasion-plans/{occasionPlan}/edit', [OccasionPlanController::class, 'edit'])->name('occasion_plans.edit');
+    Route::put('/occasion-plans/{occasionPlan}', [OccasionPlanController::class, 'update'])->name('occasion_plans.update');
+    Route::delete('/occasion-plans/{occasionPlan}', [OccasionPlanController::class, 'destroy'])->name('occasion_plans.destroy');
     
+    Route::put('/{occasion}/update-prompts', [OccasionController::class, 'updatePrompts'])->name('updatePrompts');
     
-    // Activation Requests (Secured Controller & View)
+    // Activation Requests (Secured View)
     Route::post('/billings/{id}/approve', [PackageController::class, 'approvePayment'])->name('billings.approve'); 
-    
-    // Added backend security layer to prevent users from forcing URL access
     Route::get('/billings/requests', function () {
         if (auth()->user()->role !== 'admin') {
             abort(403, 'Unauthorized Access.');
@@ -101,6 +137,29 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         return view('admin.packages.requests');
     })->name('billings.requests');
 
+    Route::get('/cgi-audit', [AdminCgiAuditController::class, 'index'])->name('cgi_audit.index');
+
 });
 
+
+// ==========================================
+// 4. LOAD DEFAULT AUTH THEN OVERRIDE WITH CUSTOM OTP
+// ==========================================
+
+// 1. Load Breeze defaults first
 require __DIR__.'/auth.php';
+
+// 2. Load our custom OTP routes
+Route::middleware('guest')->group(function () {
+    // 1. Enter Email
+    Route::get('/forgot-password', [OtpResetController::class, 'showRequestForm'])->name('password.request');
+    Route::post('/forgot-password/send', [OtpResetController::class, 'sendOtp'])->name('password.otp.send');
+    
+    // 2. BLADE 1: Enter & Check OTP (CHANGED URL HERE)
+    Route::get('/otp-system/verify', [OtpResetController::class, 'showVerifyForm'])->name('password.otp.form');
+    Route::post('/otp-system/check', [OtpResetController::class, 'checkOtp'])->name('password.otp.check');
+    
+    // 3. BLADE 2: Enter New Password (CHANGED URL HERE)
+    Route::get('/otp-system/new-password', [OtpResetController::class, 'showNewPasswordForm'])->name('password.new.form');
+    Route::post('/otp-system/update', [OtpResetController::class, 'resetPassword'])->name('password.otp.update');
+});

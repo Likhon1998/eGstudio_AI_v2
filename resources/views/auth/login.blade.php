@@ -22,6 +22,13 @@
                 <input id="remember_me" type="checkbox" class="rounded bg-gray-900 border-gray-700 text-blue-600 focus:ring-blue-500" name="remember">
                 <span class="ms-2 text-sm text-gray-400">Keep me logged in</span>
             </label>
+
+            {{-- NEW: Forgot Password Link connecting to your OTP System --}}
+            @if (Route::has('password.request'))
+                <a href="{{ route('password.request') }}" class="text-[10px] font-black text-gray-500 hover:text-white uppercase tracking-widest transition-colors">
+                    Forget password? 
+                </a>
+            @endif
         </div>
 
         <div class="mt-8">
