@@ -213,10 +213,10 @@
                             <tr class="text-[8px] text-gray-500 uppercase tracking-widest font-bold">
                                 <th class="px-5 py-3.5">Invoice No</th>
                                 <th class="px-5 py-3.5">Package Details</th>
-                                <th class="px-5 py-3.5">Amount</th>
+                                {{-- <th class="px-5 py-3.5">Amount</th> --}}
                                 <th class="px-5 py-3.5">Issue Date</th>
                                 <th class="px-5 py-3.5">Valid Until</th>
-                                <th class="px-5 py-3.5">Status</th>
+                                {{-- <th class="px-5 py-3.5">Status</th> --}}
                                 <th class="px-5 py-3.5 text-right">Action</th>
                             </tr>
                         </thead>
@@ -247,20 +247,20 @@
                                     <span class="text-[8px] text-gray-500 uppercase tracking-widest">{{ $bill->package->billing_cycle ?? 'Unknown' }} Cycle</span>
                                 </td>
                                 
-                                <td class="px-5 py-3 text-[10px] font-black text-emerald-400">${{ number_format($bill->amount, 2) }}</td>
+                                {{-- <td class="px-5 py-3 text-[10px] font-black text-emerald-400">${{ number_format($bill->amount, 2) }}</td> --}}
                                 <td class="px-5 py-3 text-[10px] text-gray-400">{{ \Carbon\Carbon::parse($bill->created_at)->format('M d, Y') }}</td>
                                 
                                 <td class="px-5 py-3 text-[10px] font-mono {{ $expiryDate === '—' ? 'text-gray-600' : 'text-orange-400' }}">
                                     {{ $expiryDate }}
                                 </td>
 
-                                <td class="px-5 py-3">
+                                {{-- <td class="px-5 py-3">
                                     @if($bill->status === 'paid')
                                         <span class="px-2 py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded text-[8px] font-black uppercase tracking-widest">Paid</span>
                                     @else
                                         <span class="px-2 py-1 bg-orange-500/10 text-orange-500 border border-orange-500/20 rounded text-[8px] font-black uppercase tracking-widest">Due</span>
                                     @endif
-                                </td>
+                                </td> --}}
                                 <td class="px-5 py-3 text-right flex justify-end gap-2 items-center">
                                     @if($bill->status === 'due')
                                         @if($bill->payment_proof)
