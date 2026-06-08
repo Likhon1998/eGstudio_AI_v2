@@ -1,7 +1,14 @@
 <x-app-layout>
     {{-- Main Container --}}
     <div class="max-w-4xl mx-auto pt-6 pb-8 px-6 space-y-6 antialiased">
-        
+
+        {{-- Flash error --}}
+        @if(session('error'))
+            <div class="px-4 py-3 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest rounded-lg">
+                {{ session('error') }}
+            </div>
+        @endif
+
         {{-- Header Section --}}
         <div class="flex items-center justify-between border-b border-white/10 pb-6">
             <div>

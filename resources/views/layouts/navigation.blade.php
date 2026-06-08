@@ -1,11 +1,19 @@
 <nav x-data="{ open: false }" class="h-16 bg-gray-900/80 backdrop-blur-lg border-b border-gray-800 flex items-center justify-between px-6 sticky top-0 z-50">
     
-    {{-- Mobile Logo --}}
-    <div class="flex items-center sm:hidden">
-        <span class="text-xl font-bold tracking-tighter text-white">eGStudio_<span class="text-blue-500">AI</span></span>
-    </div>
-
-    <div class="hidden sm:block"></div>
+    {{-- Brand (always visible when sidebar is hidden for approvers) --}}
+    @if(auth()->check() && auth()->user()->isApprover())
+        <div class="flex items-center gap-3 min-w-0">
+            <span class="text-xl font-bold tracking-tighter text-white shrink-0">eGStudio<span class="text-blue-500">AI</span></span>
+            <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-400 uppercase tracking-widest">
+                Approval Center
+            </span>
+        </div>
+    @else
+        <div class="flex items-center sm:hidden">
+            <span class="text-xl font-bold tracking-tighter text-white">eGStudio_<span class="text-blue-500">AI</span></span>
+        </div>
+        <div class="hidden sm:block"></div>
+    @endif
 
     {{-- Right Side Icons & Profile --}}
     <div class="flex items-center gap-2 sm:gap-4">
@@ -16,14 +24,24 @@
         @if(auth()->check() && auth()->user()->role === 'admin')
             
             @php
-                // Fetch ONLY invoices that are 'due' AND have a payment proof uploaded
-                $pendingApprovals = \App\Models\Billing::with('user', 'package')
-                    ->where('status', 'due')
-                    ->whereNotNull('payment_proof')
-                    ->latest()
-                    ->get();
-                    
-                $approvalCount = $pendingApprovals->count();
+                $pendingApprovals = \Illuminate\Support\Facades\Cache::remember(
+                    'admin.billing.pending_notifications',
+                    60,
+                    fn () => \App\Models\Billing::with('user', 'package')
+                        ->where('status', 'due')
+                        ->whereNotNull('payment_proof')
+                        ->latest()
+                        ->limit(10)
+                        ->get()
+                );
+
+                $approvalCount = \Illuminate\Support\Facades\Cache::remember(
+                    'admin.billing.pending_count',
+                    60,
+                    fn () => \App\Models\Billing::where('status', 'due')
+                        ->whereNotNull('payment_proof')
+                        ->count()
+                );
             @endphp
 
             <div class="relative" x-data="{ openNotifications: false }" @click.away="openNotifications = false">
@@ -105,26 +123,30 @@
         {{-- ========================================== --}}
         {{-- USER PROFILE DROPDOWN                      --}}
         {{-- ========================================== --}}
-        <x-dropdown align="right" width="48">
+        <x-dropdown align="right" width="w-52">
             <x-slot name="trigger">
-                <button class="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition">
-                    <div class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center border border-gray-700">
+                <button type="button" class="flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10 transition-all focus:outline-none">
+                    <div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 shrink-0">
                         <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                     </div>
-                    <span class="hidden sm:block">{{ Auth::user()->name }}</span>
-                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    <span class="hidden sm:block text-[11px] font-bold uppercase tracking-widest text-gray-300 max-w-[140px] truncate">{{ Auth::user()->name }}</span>
+                    <svg class="w-3.5 h-3.5 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 </button>
             </x-slot>
-            
+
             <x-slot name="content">
-                <div class="bg-gray-800 border border-gray-700 rounded-md">
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <x-dropdown-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();" class="text-red-400 hover:bg-gray-700 hover:text-red-300">
-                            {{ __('Log Out') }}
-                        </x-dropdown-link>
-                    </form>
+                <div class="px-4 py-3 border-b border-white/5">
+                    <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest">Signed in as</p>
+                    <p class="text-[11px] font-bold text-white truncate mt-0.5">{{ Auth::user()->name }}</p>
                 </div>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <x-dropdown-link :href="route('logout')" onclick="event.preventDefault(); this.closest('form').submit();"
+                        class="!text-red-400 hover:!bg-red-500/10 hover:!text-red-300 flex items-center gap-2">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        {{ __('Log Out') }}
+                    </x-dropdown-link>
+                </form>
             </x-slot>
         </x-dropdown>
     </div>

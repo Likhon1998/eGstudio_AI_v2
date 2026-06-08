@@ -1,4 +1,8 @@
 <x-app-layout>
+    @push('vite-scripts')
+        @vite(['resources/js/gallery-download.js'])
+    @endpush
+
     {{-- Global Notification System --}}
     <div x-data="{ 
             notifications: [], 
@@ -22,74 +26,49 @@
 
     {{-- Main Workspace --}}
     <div class="max-w-full mx-auto bg-[#050505] min-h-screen flex flex-col" 
-         x-data="{ 
+         x-data="Object.assign(typeof window.galleryDownloadState === 'function' ? window.galleryDownloadState() : {}, {
             openModal: false, 
             currentImage: '', 
             filter: 'all',
-            
-            async forceDownload(url, filename) {
-                $dispatch('notify', { message: 'Preparing Download...', type: 'info' });
+            clientFilter: 'all', 
 
-                // 1. THE ABSOLUTE FIX FOR CLOUDINARY
-                // Inject 'fl_attachment' to force the browser to download directly, skipping CORS issues.
-                if (url.includes('cloudinary.com')) {
-                    let dlUrl = url;
-                    if (dlUrl.includes('/upload/')) {
-                        dlUrl = dlUrl.replace('/upload/', '/upload/fl_attachment/');
-                    } else if (dlUrl.includes('/fetch/')) {
-                        dlUrl = dlUrl.replace('/fetch/', '/fetch/fl_attachment/');
-                    }
-                    
-                    const link = document.createElement('a');
-                    link.href = dlUrl;
-                    link.setAttribute('download', filename || 'neural-asset.png');
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    $dispatch('notify', { message: 'Download Initiated', type: 'success' });
-                    return;
-                }
-
-                // 2. FOR LOCAL SERVER FILES (NON-CLOUDINARY)
+            submittingId: null,
+            async submitForApproval(genId, mediaUrl, mediaType, variant, isBranded) {
+                this.submittingId = mediaUrl;
                 try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error('Network error');
-                    const blob = await response.blob();
-                    const blobUrl = window.URL.createObjectURL(blob);
-                    
-                    const link = document.createElement('a');
-                    link.href = blobUrl;
-                    link.download = filename || 'neural-asset.png';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    window.URL.revokeObjectURL(blobUrl);
-                    $dispatch('notify', { message: 'Download Initiated', type: 'success' });
-
+                    const response = await fetch('{{ route('approvals.submit') }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                        body: JSON.stringify({ cgi_generation_id: genId, media_url: mediaUrl, media_type: mediaType, variant: variant, is_branded: isBranded })
+                    });
+                    const data = await response.json();
+                    if (response.ok && data.success) {
+                        $dispatch('notify', { message: 'Sent for client approval', type: 'success' });
+                        setTimeout(() => location.reload(), 900);
+                    } else {
+                        $dispatch('notify', { message: data.message || 'Submission failed', type: 'error' });
+                    }
                 } catch (e) {
-                    // 3. NO PREVIEWS ALLOWED
-                    // If fetch fails, we still force a silent link click with the 'download' attribute.
-                    // We completely removed window.open() so it never opens a preview tab.
-                    console.error('Fetch failed, forcing hard download link', e);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.setAttribute('download', filename || 'neural-asset.png');
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    $dispatch('notify', { message: 'Download Forced', type: 'info' });
+                    $dispatch('notify', { message: 'Server error while submitting', type: 'error' });
+                } finally {
+                    this.submittingId = null;
                 }
             }
-         }">
+         })">
         
         {{-- Header & Filter Toolbar --}}
-        <div class="flex flex-col md:flex-row items-center justify-between px-8 py-6 border-b border-white/5 bg-[#0a0a0a] gap-4">
+        <div class="flex flex-col xl:flex-row items-center justify-between px-8 py-6 border-b border-white/5 bg-[#0a0a0a] gap-6">
             <div>
                 <h1 class="text-[13px] font-black text-white tracking-[0.2em] uppercase flex items-center gap-3">
                     <span class="w-1 h-5 bg-emerald-600 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
                     Neural Image Repository
                 </h1>
-                <p class="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">High-Fidelity Synthetic Stills</p>
+                <p class="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">
+                    High-Fidelity Synthetic Stills
+                    @if($assets->total() > 0)
+                        · <span class="text-emerald-500/80">{{ number_format($assets->total()) }} images from database</span>
+                    @endif
+                </p>
             </div>
 
             {{-- Filter Controller --}}
@@ -109,79 +88,53 @@
                     class="px-5 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all">
                     Raw (No Logo)
                 </button>
+                <button @click="filter = 'merged'" 
+                    :class="filter === 'merged' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'text-gray-500 hover:text-gray-300'"
+                    class="px-5 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all">
+                    Merged Image
+                </button>
             </div>
 
-            <div class="flex items-center gap-3">
-                <a href="{{ route('dashboard') }}" class="px-5 py-2 bg-white/5 text-gray-400 hover:text-white text-[10px] font-black rounded-md transition-all uppercase tracking-widest border border-white/5">
+            {{-- Right Controls (Dropdown + Dashboard Button) --}}
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+                
+                {{-- Client Dropdown (Strictly visible to admins only) --}}
+                @if($isAdmin && isset($clients) && $clients->count() > 0)
+                <div class="relative w-full sm:w-auto">
+                    <select x-model="clientFilter" 
+                            class="w-full sm:w-64 appearance-none bg-white/5 border border-white/10 text-white pl-4 pr-10 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all cursor-pointer">
+                        <option value="all" class="bg-[#0a0a0a] text-white font-bold">Show All Clients</option>
+                        @foreach($clients as $client)
+                            <option value="{{ $client->id }}" class="bg-[#0a0a0a] text-white">
+                                {{ $client->name ?? 'Client #'.$client->id }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-white/40">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                </div>
+                @endif
+
+                <a href="{{ route('dashboard') }}" class="w-full sm:w-auto text-center px-5 py-2.5 bg-white/5 text-gray-400 hover:text-white text-[10px] font-black rounded-md transition-all uppercase tracking-widest border border-white/5 hover:border-emerald-500/50">
                     Dashboard
                 </a>
             </div>
         </div>
 
         <div class="p-8 flex-1">
-            @if($images->isEmpty())
+            @if($assets->total() === 0)
                 <div class="col-span-full py-32 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2rem] bg-white/[0.01]">
                     <h3 class="text-[11px] font-black text-gray-600 uppercase tracking-[0.3em]">No Static Assets Detected</h3>
                 </div>
             @else
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                    @foreach($images as $image)
-                        
-                        {{-- Standard Image Card --}}
-                        @if($image->image_url)
-                        <div x-show="filter === 'all' || filter === 'raw'" 
-                             x-transition:enter="transition ease-out duration-300"
-                             class="group bg-[#0a0a0a] border border-white/5 rounded-2xl overflow-hidden shadow-2xl transition-all hover:border-white/20">
-                            <div class="relative aspect-square bg-black cursor-pointer overflow-hidden" 
-                                @click="openModal = true; currentImage = '{{ str_starts_with($image->image_url, 'http') ? $image->image_url : asset('storage/' . $image->image_url) }}'; $dispatch('notify', {message: 'Enlarging Raw Still', type: 'info'})">
-                                <img src="{{ str_starts_with($image->image_url, 'http') ? $image->image_url : asset('storage/' . $image->image_url) }}" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-500">
-                                <div class="absolute top-4 left-4">
-                                    <span class="px-2 py-1 bg-black/60 backdrop-blur-md border border-white/10 text-[8px] font-black text-gray-400 uppercase tracking-widest rounded-md">RAW_RENDER</span>
-                                </div>
-                            </div>
-                            <div class="p-6">
-                                <h3 class="text-[12px] font-black text-white uppercase tracking-wider truncate">{{ $image->product_name }}</h3>
-                                <div class="flex justify-between items-center pt-4 border-t border-white/5 mt-4">
-                                    <span class="text-[9px] font-black text-gray-500 uppercase tracking-widest">Neural Asset</span>
-                                    <button @click.stop="forceDownload('{{ str_starts_with($image->image_url, 'http') ? $image->image_url : asset('storage/' . $image->image_url) }}', 'raw-{{ $image->id }}.png')" 
-                                            class="text-gray-600 hover:text-white transition-colors">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        @endif
-
-                        {{-- Branded Image Card --}}
-                        @if($image->branded_image_url)
-                        @can('view_branded_assets')
-                        <div x-show="filter === 'all' || filter === 'branded'" 
-                             x-transition:enter="transition ease-out duration-300"
-                             class="group bg-[#0a0a0a] border border-emerald-500/10 rounded-2xl overflow-hidden shadow-2xl transition-all hover:border-emerald-500/40">
-                             
-                            <div class="relative aspect-square bg-black cursor-pointer overflow-hidden" 
-                                @click="openModal = true; currentImage = '{{ str_starts_with($image->branded_image_url, 'http') ? $image->branded_image_url : asset('storage/' . $image->branded_image_url) }}'; $dispatch('notify', {message: 'Enlarging Branded Still', type: 'info'})">
-                                <img src="{{ str_starts_with($image->branded_image_url, 'http') ? $image->branded_image_url : asset('storage/' . $image->branded_image_url) }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-500">
-                                <div class="absolute top-4 left-4">
-                                    <span class="px-2 py-1 bg-emerald-600 text-[8px] font-black text-white uppercase tracking-widest rounded-md shadow-lg shadow-emerald-600/20">Identity_Applied</span>
-                                </div>
-                            </div>
-                            <div class="p-6">
-                                <h3 class="text-[12px] font-black text-white uppercase tracking-wider truncate">{{ $image->product_name }}</h3>
-                                <div class="flex justify-between items-center pt-4 border-t border-white/5 mt-4">
-                                    <span class="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Master Still</span>
-                                    <button @click.stop="forceDownload('{{ str_starts_with($image->branded_image_url, 'http') ? $image->branded_image_url : asset('storage/' . $image->branded_image_url) }}', 'branded-{{ $image->id }}.png')" 
-                                            class="text-gray-600 hover:text-white transition-colors">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        @endcan
-                        @endif
-
+                    @foreach($assets as $asset)
+                        @include('partials.gallery.cgi-image-asset-card', ['asset' => $asset, 'requiresApproval' => $requiresApproval])
                     @endforeach
                 </div>
+
+                {{ $assets->links('vendor.pagination.gallery') }}
             @endif
 
             {{-- Image Viewer Modal --}}
@@ -194,8 +147,14 @@
                      x-cloak>
                     <div class="relative w-full max-w-5xl" @click.away="openModal = false">
                         <button @click="openModal = false" class="absolute -top-12 right-0 text-white font-black hover:text-emerald-500 transition-colors uppercase text-[10px] tracking-[0.2em]">Close Viewer ✕</button>
-                        <div class="bg-black rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+                        <div class="bg-black rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative">
                             <img :src="currentImage" class="w-full max-h-[80vh] object-contain bg-black">
+                            <div class="absolute bottom-4 right-4">
+                                <button type="button" @click="openDownloadPicker(currentImage, 'neural-still')"
+                                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-lg">
+                                    Download
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -205,6 +164,8 @@
         <div class="py-6 px-8 border-t border-white/5 flex justify-center">
             <span class="text-[9px] text-gray-700 font-black uppercase tracking-[0.4em]">Powered by eGeneration</span>
         </div>
+
+        @include('partials.gallery-download-picker')
     </div>
 
     <style>

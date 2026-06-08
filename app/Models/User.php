@@ -23,7 +23,11 @@ class User extends Authenticatable
         'email',
         'password',
         'role', // Added for role-based access control
-        
+
+        // --- ADDED FOR APPROVAL WORKFLOW ---
+        'account_type', // 'approver' | null (standard user)
+        'client_id',    // groups the 2 credentials of a single client
+
         // --- ADDED FOR SAAS BILLING ---
         'package_id',
         'directive_credits',
@@ -73,5 +77,81 @@ class User extends Authenticatable
     public function logos()
     {
         return $this->hasMany(Logo::class);
+    }
+
+    /**
+     * Relationship: A user can generate many Occasion Campaigns.
+     */
+    public function occasions()
+    {
+        return $this->hasMany(Occasion::class);
+    }
+
+    // Inside app/Models/User.php
+    public function cgiGenerations()
+    {
+        return $this->hasMany(CgiGeneration::class);
+    }
+
+    /**
+     * =====================================================================
+     * APPROVAL WORKFLOW HELPERS
+     * =====================================================================
+     */
+
+    public function isApprover(): bool
+    {
+        return $this->account_type === 'approver';
+    }
+
+    public function isAdmin(): bool
+    {
+        if (!$this->role) {
+            return false;
+        }
+
+        return in_array(strtolower($this->role), ['admin', 'super admin', 'system admin'], true);
+    }
+
+    /**
+     * The approver account assigned to this user/client (if any).
+     */
+    public function approver()
+    {
+        return $this->hasOne(User::class, 'client_id', 'id')
+            ->where('account_type', 'approver');
+    }
+
+    /**
+     * The user (client) this approver reviews content for.
+     */
+    public function client()
+    {
+        return $this->belongsTo(User::class, 'client_id');
+    }
+
+    /**
+     * The user id whose content this account is tied to (the "client").
+     * For an approver it's their linked user; otherwise it's itself.
+     */
+    public function clientOwnerId()
+    {
+        return $this->isApprover() ? $this->client_id : $this->id;
+    }
+
+    /**
+     * Standard users with an approver must get merged pictures/videos approved before publish.
+     * Admins and approver accounts are never in this workflow.
+     */
+    public function requiresApproval(): bool
+    {
+        return !$this->isAdmin()
+            && !$this->isApprover()
+            && $this->approver()->exists();
+    }
+
+    public function mediaApprovals()
+    {
+        return $this->hasMany(MediaApproval::class, 'maker_id');
     }
 }

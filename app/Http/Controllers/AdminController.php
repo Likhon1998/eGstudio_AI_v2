@@ -72,19 +72,67 @@ class AdminController extends Controller
             'name'      => 'required|string|max:255',
             'email'     => 'required|string|email|max:255|unique:users',
             'password'  => 'required|string|min:8',
-            'role_name' => 'required|exists:roles,name'
+            'role_name' => 'required|exists:roles,name',
         ]);
 
         $user = User::create([
             'name'     => $request->name,
             'email'    => $request->email,
             'password' => Hash::make($request->password),
-            'role'     => 'user', 
+            'role'     => 'user',
         ]);
 
         $user->assignRole($request->role_name);
 
-        return redirect()->route('dashboard')->with('success', "Agent {$user->name} provisioned with '{$request->role_name}' clearance.");
+        return redirect()->route('admin.users.index')->with('success', "Agent {$user->name} provisioned with '{$request->role_name}' clearance.");
+    }
+
+    /**
+     * ==========================================================================
+     * METHOD: storeApprover
+     * ==========================================================================
+     * Creates a second "approval credential" (an approver login) and attaches it
+     * to an existing user. The approver can then log in and review/approve every
+     * pic & video that user makes before it can be published.
+     */
+    public function storeApprover(Request $request, $id)
+    {
+        if (!auth()->check() || auth()->user()->role !== 'admin') {
+            abort(403, 'Unauthorized Access.');
+        }
+
+        $client = User::findOrFail($id);
+
+        // Only standard (non-admin, non-approver) users can own an approver.
+        if ($client->isAdmin() || $client->account_type === 'approver') {
+            return back()->with('error', 'An approver can only be attached to a standard user account.');
+        }
+
+        // One approver per user (2 credentials per client max).
+        $existing = User::where('client_id', $client->id)
+            ->where('account_type', 'approver')
+            ->first();
+
+        if ($existing) {
+            return back()->with('error', "{$client->name} already has an approval credential ({$existing->email}).");
+        }
+
+        $request->validate([
+            'approver_name'     => 'nullable|string|max:255',
+            'approver_email'    => 'required|string|email|max:255|unique:users,email',
+            'approver_password' => 'required|string|min:8',
+        ]);
+
+        $approver = User::create([
+            'name'         => $request->approver_name ?: ($client->name . ' Approver'),
+            'email'        => $request->approver_email,
+            'password'     => Hash::make($request->approver_password),
+            'role'         => 'user',
+            'account_type' => 'approver',
+            'client_id'    => $client->id,
+        ]);
+
+        return back()->with('success', "Approval credential created for {$client->name}. They can now log in with {$approver->email} to review submissions.");
     }
 
     // ==========================================
@@ -192,6 +240,12 @@ class AdminController extends Controller
         ]);
 
         $client = \App\Models\User::findOrFail($userId);
+
+        // Approver credentials never receive plans/credits.
+        if ($client->account_type === 'approver') {
+            return back()->with('error', 'Approver accounts do not get plans. Assign the plan to the user they review for.');
+        }
+
         $package = \App\Models\Package::findOrFail($request->package_id);
 
         // 2. Handle Old Packages & Calculate new Expiration
@@ -296,13 +350,14 @@ class AdminController extends Controller
         \App\Models\CreditInjectionLog::create([
             'user_id'      => $id,
             'admin_id'     => auth()->id(),
+            'wallet_type'  => 'cgi',
             'credit_type'  => $request->credit_type,
             'amount'       => $request->amount,
             'billing_note' => $request->billing_note,
         ]);
 
         $prettyName = ucwords(str_replace('_', ' ', $request->credit_type));
-        return redirect()->back()->with('success', "Added {$request->amount} {$prettyName}. Transaction logged for billing!");
+        return redirect()->back()->with('success', "Added {$request->amount} {$prettyName} to CGI wallet. Transaction logged for billing!");
     }
 
     /**

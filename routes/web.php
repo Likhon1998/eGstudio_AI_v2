@@ -9,23 +9,28 @@ use App\Http\Controllers\PricingController;
 use App\Http\Controllers\ProductAssetController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CgiGenerationController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GalleryDownloadController;
 use App\Http\Controllers\AdminController; 
-use App\Models\CgiGeneration; 
+use App\Http\Controllers\ApprovalController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
 // === OCCASION CONTROLLERS ===
 use App\Http\Controllers\OccasionController;
-use App\Http\Controllers\Admin\OccasionPlanController;
-use App\Http\Controllers\Admin\AdminOccasionPackageController;
+use App\Http\Controllers\PublicStorageController;
+
+// Serve uploaded media from storage/app/public (no auth; avoids Laravel /storage 403 on missing files)
+Route::get('/media/{path}', [PublicStorageController::class, 'show'])
+    ->where('path', '.*')
+    ->name('media.public');
 
 Route::redirect('/', '/login');
 
 // Dashboard Route (Regular Users)
-Route::get('/dashboard', function () {
-    $generations = CgiGeneration::where('user_id', Auth::id())->get();
-    return view('dashboard', ['generations' => $generations]);
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', DashboardController::class)
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 
 Route::middleware('auth')->group(function () {
@@ -48,10 +53,16 @@ Route::middleware('auth')->group(function () {
     Route::post('/cgi/{id}/make-video', [CgiGenerationController::class, 'makeVideo'])->name('cgi.make-video');
     Route::get('/cgi/videos', [CgiGenerationController::class, 'videoGallery'])->name('cgi.videos');
     Route::get('/cgi/images', [CgiGenerationController::class, 'imageGallery'])->name('cgi.images');
+    Route::post('/gallery/download-image', [GalleryDownloadController::class, 'download'])->name('gallery.download-image');
     Route::post('/cgi/apply-branding-image', [CgiGenerationController::class, 'applyBrandingImage'])->name('cgi.applyBrandingImage');
     Route::post('/cgi/apply-branding-video', [CgiGenerationController::class, 'applyBrandingVideo'])->name('cgi.applyBrandingVideo');
+    Route::post('/cgi/apply-footer', [CgiGenerationController::class, 'applyFooter'])->name('cgi.addFooter');
+    Route::post('/cgi/merge-template', [CgiGenerationController::class, 'mergeTemplate'])->name('cgi.mergeTemplate');
+    Route::post('/cgi/merge-video-template', [CgiGenerationController::class, 'mergeVideoTemplate'])->name('cgi.mergeVideoTemplate');
+    Route::post('/cgi/{id}/generate-caption', [CgiGenerationController::class, 'generateCaption'])->name('cgi.generateCaption');
     Route::post('/cgi/{id}/publish', [CgiGenerationController::class, 'publishToSocial'])->name('cgi.publish');
     Route::get('/cgi/post-history', [CgiGenerationController::class, 'postHistory'])->name('cgi.post_history');
+    Route::post('/cgi-studio/autofill', [CgiGenerationController::class, 'autoFill'])->name('cgi.autofill');
     
     // ==========================================
     // 2. NEW: OCCASION STUDIO PIPELINE
@@ -60,14 +71,30 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [OccasionController::class, 'index'])->name('index');
         Route::get('/create', [OccasionController::class, 'create'])->name('create');
         Route::post('/store', [OccasionController::class, 'store'])->name('store');
+        
+        // AJAX Action Routes
+        Route::get('/{occasion}/prompt-status', [OccasionController::class, 'promptStatus'])->name('promptStatus');
+        Route::get('/{occasion}/image-status', [OccasionController::class, 'imageStatus'])->name('imageStatus');
+        Route::post('/{occasion}/retry-prompt', [OccasionController::class, 'retryPrompt'])->name('retryPrompt');
+        Route::put('/{id}/update-prompts', [OccasionController::class, 'updatePrompts'])->name('updatePrompts');
         Route::post('/{occasion}/make-picture', [OccasionController::class, 'makePicture'])->name('makePicture');
         Route::post('/{occasion}/make-video', [OccasionController::class, 'makeVideo'])->name('makeVideo');
+        Route::post('/{occasion}/add-logo', [OccasionController::class, 'addBrandingLogo'])->name('addLogo');
+        Route::post('/merge-template', [OccasionController::class, 'mergeTemplate'])->name('mergeTemplate');
+        
         Route::delete('/{occasion}', [OccasionController::class, 'destroy'])->name('destroy');
+        Route::get('/gallery', [OccasionController::class, 'gallery'])->name('gallery');
+        Route::post('/{id}/generate-caption', [OccasionController::class, 'generateCaption'])->name('generateCaption');
+        Route::post('/{id}/publish', [OccasionController::class, 'publishToSocial'])->name('publishToSocial');
+        Route::delete('/post-history/{id}', [OccasionController::class, 'destroyPostHistory'])->name('postHistory.destroy');
+        Route::post('/auto-fill', [OccasionController::class, 'autoFill'])->name('autoFill');
     });
 
     // Brand Logo Library
     Route::get('/logos', [LogoController::class, 'index'])->name('logos.index');
     Route::post('/logos', [LogoController::class, 'store'])->name('logos.store');
+    Route::get('/logos/{logo}/edit', [LogoController::class, 'edit'])->name('logos.edit');
+    Route::put('/logos/{logo}', [LogoController::class, 'update'])->name('logos.update');
     Route::delete('/logos/{logo}', [LogoController::class, 'destroy'])->name('logos.destroy');
     
     // SaaS User Billing & Pricing
@@ -81,6 +108,15 @@ Route::middleware('auth')->group(function () {
 
     // Assets
     Route::resource('assets', ProductAssetController::class);
+
+    // ==========================================
+    // CLIENT APPROVAL WORKFLOW
+    // ==========================================
+    // User optionally re-flags a finished pic/video for sign-off.
+    Route::post('/approvals/submit', [ApprovalController::class, 'submit'])->name('approvals.submit');
+    // Approver review dashboard + decision action.
+    Route::get('/approvals', [ApprovalController::class, 'index'])->name('approvals.index');
+    Route::post('/approvals/review', [ApprovalController::class, 'review'])->name('approvals.review');
 });
 
 
@@ -98,9 +134,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::delete('/users/{id}', [AdminController::class, 'destroyUser'])->name('users.destroy');
     Route::post('/users/{id}/top-up', [AdminController::class, 'topUpCredits'])->name('users.top_up');
     Route::post('/users/{user}/activate-tier', [AdminController::class, 'activateTier'])->name('users.activate_tier');
-    
-    // Assign Occasion Plan directly to User
-    Route::post('/users/{user}/assign-occasion-package', [AdminOccasionPackageController::class, 'assignPackage'])->name('users.assign_occasion_package');
+    // Attach an approval credential (approver login) to an existing user
+    Route::post('/users/{id}/approver', [AdminController::class, 'storeApprover'])->name('users.approver.store');
 
     // Role Management
     Route::get('/roles', [AdminController::class, 'indexRoles'])->name('roles.index');
@@ -119,15 +154,6 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/packages/{id}/edit', [PackageController::class, 'edit'])->name('packages.edit');
     Route::put('/packages/{id}', [PackageController::class, 'update'])->name('packages.update');
 
-    // SaaS Master Templates (Occasion Studio)
-    Route::get('/occasion-plans', [OccasionPlanController::class, 'index'])->name('occasion_plans.index');
-    Route::post('/occasion-plans', [OccasionPlanController::class, 'store'])->name('occasion_plans.store');
-    Route::get('/occasion-plans/{occasionPlan}/edit', [OccasionPlanController::class, 'edit'])->name('occasion_plans.edit');
-    Route::put('/occasion-plans/{occasionPlan}', [OccasionPlanController::class, 'update'])->name('occasion_plans.update');
-    Route::delete('/occasion-plans/{occasionPlan}', [OccasionPlanController::class, 'destroy'])->name('occasion_plans.destroy');
-    
-    Route::put('/{occasion}/update-prompts', [OccasionController::class, 'updatePrompts'])->name('updatePrompts');
-    
     // Activation Requests (Secured View)
     Route::post('/billings/{id}/approve', [PackageController::class, 'approvePayment'])->name('billings.approve'); 
     Route::get('/billings/requests', function () {
@@ -155,11 +181,11 @@ Route::middleware('guest')->group(function () {
     Route::get('/forgot-password', [OtpResetController::class, 'showRequestForm'])->name('password.request');
     Route::post('/forgot-password/send', [OtpResetController::class, 'sendOtp'])->name('password.otp.send');
     
-    // 2. BLADE 1: Enter & Check OTP (CHANGED URL HERE)
+    // 2. BLADE 1: Enter & Check OTP
     Route::get('/otp-system/verify', [OtpResetController::class, 'showVerifyForm'])->name('password.otp.form');
     Route::post('/otp-system/check', [OtpResetController::class, 'checkOtp'])->name('password.otp.check');
     
-    // 3. BLADE 2: Enter New Password (CHANGED URL HERE)
+    // 3. BLADE 2: Enter New Password
     Route::get('/otp-system/new-password', [OtpResetController::class, 'showNewPasswordForm'])->name('password.new.form');
     Route::post('/otp-system/update', [OtpResetController::class, 'resetPassword'])->name('password.otp.update');
 });

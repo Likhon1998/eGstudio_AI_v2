@@ -41,12 +41,188 @@
     <div class="w-full max-w-[98%] mx-auto py-4 px-2 sm:px-4">
 
         {{-- Header Section --}}
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4" x-data="{ 
+            showAutofillModal: false,
+            isAutofilling: false,
+            autofillImage: null,
+            autofillPreview: null,
+            selectedAssetPath: null,
+            searchQuery: '',
+            dropdownOpen: false,
+
+            handleAutofillFile(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    this.autofillImage = file;
+                    this.autofillPreview = URL.createObjectURL(file);
+                    this.selectedAssetPath = null;
+                    this.dropdownOpen = false;
+                }
+            },
+
+            selectFromLibrary(path, fullUrl) {
+                this.autofillPreview = fullUrl;
+                this.selectedAssetPath = path;
+                this.autofillImage = null;
+                this.dropdownOpen = false;
+            },
+
+            async triggerAutofill() {
+                if (!this.autofillImage && !this.selectedAssetPath) {
+                    $dispatch('notify', { message: 'Please select or upload a picture.', type: 'error' });
+                    return;
+                }
+
+                this.isAutofilling = true;
+                const formData = new FormData();
+                if (this.autofillImage) formData.append('product_image', this.autofillImage);
+                if (this.selectedAssetPath) formData.append('selected_asset_path', this.selectedAssetPath);
+                formData.append('_token', '{{ csrf_token() }}');
+
+                try {
+                    const response = await fetch('{{ route('cgi.autofill') }}', {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Transfer file to main input if it's a new upload
+                        if (this.autofillImage) {
+                            const mainInput = document.getElementById('product_image');
+                            const dataTransfer = new DataTransfer();
+                            dataTransfer.items.add(this.autofillImage);
+                            mainInput.files = dataTransfer.files;
+                        }
+
+                        // Prepare payload for main form components
+                        const fillData = {
+                            ...result.data,
+                            _imagePreview: this.autofillPreview,
+                            _assetPath: this.selectedAssetPath,
+                            _isNew: !!this.autofillImage
+                        };
+
+                        $dispatch('cgi-autofill-reset');
+                        $dispatch('cgi-autofill-data', fillData);
+                        $dispatch('notify', { message: 'AI Analysis Complete! Form Filled.', type: 'success' });
+                        this.showAutofillModal = false;
+                    } else {
+                        $dispatch('notify', { message: result.message || 'Autofill failed.', type: 'error' });
+                    }
+                } catch (e) {
+                    $dispatch('notify', { message: 'Network error during AI analysis.', type: 'error' });
+                } finally {
+                    this.isAutofilling = false;
+                }
+            }
+        }">
             <div>
                 <h2 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">CGI Studio Director</h2>
-                <p class="text-gray-400 text-[11px] mt-1 font-medium">Build your commercial. Use the <span
-                        class="text-blue-400 font-bold">ⓘ</span> icons to understand each step.</p>
+                <div class="flex items-center gap-3 mt-1">
+                    <p class="text-gray-400 text-[11px] font-medium italic">Build your commercial or</p>
+                    <button type="button" @click="showAutofillModal = true" class="flex items-center gap-1.5 px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[9px] font-black uppercase tracking-widest shadow-lg shadow-blue-600/20 transition-all group">
+                        <svg class="w-3 h-3 group-hover:animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        AI Auto-Fill
+                    </button>
+                </div>
             </div>
+
+            {{-- AI AUTO-FILL MODAL --}}
+            <template x-teleport="body">
+                <div x-show="showAutofillModal" x-cloak class="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-black/90 backdrop-blur-md" @click="showAutofillModal = false" x-transition.opacity></div>
+                    
+                    <div class="relative bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all"
+                         x-show="showAutofillModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
+                        
+                        <div class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                            <h3 class="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                Intelligent Asset Analysis
+                            </h3>
+                            <button @click="showAutofillModal = false" class="text-gray-500 hover:text-white transition-colors">✕</button>
+                        </div>
+
+                        <div class="p-6 space-y-6 bg-black/40">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 text-center">Step 1: Provide Product Image</label>
+                                
+                                {{-- Selection Method: Library or Upload --}}
+                                <div class="space-y-4">
+                                    {{-- Custom Library Selector --}}
+                                    <div class="relative">
+                                        <button type="button" @click="dropdownOpen = !dropdownOpen" class="w-full bg-[#111] border border-gray-700/80 rounded-lg p-2.5 flex items-center justify-between hover:border-blue-500/50 transition-all">
+                                            <div class="flex items-center gap-2 overflow-hidden">
+                                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Select from library...</span>
+                                            </div>
+                                            <svg class="w-3 h-3 text-gray-500 transition-transform" :class="dropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                        </button>
+
+                                        <div x-show="dropdownOpen" @click.away="dropdownOpen = false" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-[#1a1a1a] border border-gray-700 rounded-lg shadow-2xl z-[70] flex flex-col overflow-hidden">
+                                            <div class="p-2 border-b border-gray-800 bg-[#111]">
+                                                <input type="text" x-model="searchQuery" placeholder="Search products..." class="w-full bg-[#0a0a0a] border border-gray-700 rounded-md px-3 py-1.5 text-white text-[10px] outline-none">
+                                            </div>
+                                            <div class="max-h-40 overflow-y-auto custom-scrollbar p-1">
+                                                @foreach($productAssets as $asset)
+                                                    <button type="button" 
+                                                            x-show="String('{{ addslashes($asset->name) }}').toLowerCase().includes(searchQuery.toLowerCase())"
+                                                            @click="selectFromLibrary('{{ $asset->file_path }}', '{{ asset('storage/' . $asset->file_path) }}')"
+                                                            class="w-full flex items-center gap-2 p-1.5 rounded hover:bg-blue-600/20 transition-colors text-left">
+                                                        <img src="{{ asset('storage/' . $asset->file_path) }}" class="w-6 h-6 rounded object-cover border border-gray-700 bg-black">
+                                                        <span class="text-[10px] font-bold text-gray-300 truncate">{{ $asset->name }}</span>
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- OR Divider --}}
+                                    <div class="flex items-center gap-3">
+                                        <div class="h-px flex-1 bg-white/5"></div>
+                                        <span class="text-[8px] font-black text-gray-600 uppercase tracking-widest">OR UPLOAD</span>
+                                        <div class="h-px flex-1 bg-white/5"></div>
+                                    </div>
+
+                                    {{-- Upload Area / Preview --}}
+                                    <label class="flex flex-col items-center justify-center w-full h-44 border-2 border-white/10 border-dashed rounded-xl cursor-pointer bg-black hover:bg-white/[0.02] transition-all overflow-hidden group relative" :class="autofillPreview ? 'border-blue-500/50' : 'hover:border-blue-500/50'">
+                                        <div x-show="!autofillPreview" class="flex flex-col items-center justify-center">
+                                            <div class="p-3 bg-gray-800/50 rounded-full mb-2 group-hover:bg-blue-600/20 transition-colors">
+                                                <svg class="w-6 h-6 text-gray-500 group-hover:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                            </div>
+                                            <p class="text-[9px] text-gray-400 font-black uppercase tracking-widest">New Reference Image</p>
+                                        </div>
+                                        <img x-show="autofillPreview" :src="autofillPreview" class="w-full h-full object-contain p-2 scale-95 group-hover:scale-100 transition-transform">
+                                        <input type="file" class="hidden" @change="handleAutofillFile" accept="image/*">
+                                        
+                                        <div x-show="autofillPreview" class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <span class="text-[8px] font-black text-white uppercase tracking-widest bg-blue-600 px-3 py-1.5 rounded-lg shadow-lg">Change Image</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-blue-500/5 border border-blue-500/10 p-3 rounded-lg">
+                                <p class="text-[9px] text-blue-400/80 leading-relaxed text-center font-medium italic">
+                                    "AI will analyze this image to determine the product name, materials, atmosphere, and cinematic style for you."
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="px-6 py-4 border-t border-white/5 bg-white/[0.01] flex justify-end gap-3">
+                            <button @click="showAutofillModal = false" class="px-4 py-2 text-gray-400 hover:text-white rounded text-[10px] font-black uppercase tracking-widest transition-colors">Cancel</button>
+                            <button @click="triggerAutofill()" :disabled="isAutofilling" class="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-lg transition-all flex items-center gap-2 disabled:opacity-50">
+                                <span x-show="!isAutofilling">Analyze & Fill Form</span>
+                                <span x-show="isAutofilling" class="flex items-center gap-2">
+                                    <svg class="animate-spin h-3 w-3 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    AI is Thinking...
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </template>
 
             <div class="flex items-center gap-2 w-full sm:w-auto">
 
@@ -82,7 +258,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
 
                     {{-- 01. The Product (LEFT SIDE) --}}
-                    <div x-data="{ val: '' }">
+                    <div x-data="{ val: '' }" @cgi-autofill-data.window="val = $event.detail.product_name || val">
                         <div class="flex items-center gap-2 mb-2 relative group w-fit">
                             <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">01. What
                                 are you selling?</label>
@@ -98,41 +274,41 @@
                                 Adding the material helps the AI create realistic textures.
                             </div>
                         </div>
-                        <input type="text" name="product_name" x-model="val" placeholder="E.g. Luxury Leather Watch..."
+                        <input type="text" name="product_name" x-model="val" placeholder="E.g. Energy-Saving LED Bulb..."
                             required
                             class="w-full bg-black/40 border border-gray-700/80 rounded-xl text-white focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500 p-2.5 outline-none transition-all text-sm shadow-inner placeholder-gray-600">
 
                         <div class="flex gap-1.5 mt-2.5 overflow-x-auto pb-2 custom-scrollbar snap-x">
-                            <button type="button" @click="val = 'Luxury Gold & Leather Watch'"
-                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">⌚
-                                Gold Watch</button>
-                            <button type="button" @click="val = 'Nitro Mesh Running Shoe'"
-                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">👟
-                                Running Shoe</button>
-                            <button type="button" @click="val = 'Matte Carbon Fiber Drone'"
-                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">🚁
-                                FPV Drone</button>
-                            <button type="button" @click="val = 'Frosted Glass Perfume Bottle'"
+                            <button type="button" @click="val = 'Energy-Saving LED Bulb'"
+                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">💡
+                                LED Bulb</button>
+                            <button type="button" @click="val = 'Slim LED Ceiling Panel Light'"
+                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">🔲
+                                Panel Light</button>
+                            <button type="button" @click="val = 'LED Tube Batten Light'"
+                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">📏
+                                Tube Light</button>
+                            <button type="button" @click="val = 'Recessed Ceiling Downlight'"
+                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">🔆
+                                Downlight</button>
+                            <button type="button" @click="val = 'Adjustable LED Spotlight'"
+                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">🎯
+                                Spotlight</button>
+                            <button type="button" @click="val = 'Smart RGB Color Bulb'"
+                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">🌈
+                                Smart Bulb</button>
+                            <button type="button" @click="val = 'Outdoor Hanging String Lights'"
                                 class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">✨
-                                Perfume</button>
-                            <button type="button" @click="val = 'Matte Black Sports Car'"
-                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">🏎️
-                                Sports Car</button>
-                            <button type="button" @click="val = 'High-End Gaming PC Setup'"
-                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">💻
-                                Gaming PC</button>
-                            <button type="button" @click="val = 'Obsidian Mirror Smartphone'"
-                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">📱
-                                Smartphone</button>
-                            <button type="button" @click="val = 'Gourmet Truffle Burger'"
-                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">🍔
-                                Gourmet Burger</button>
-                            <button type="button" @click="val = 'Vintage 35mm Film Camera'"
-                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">📸
-                                Film Camera</button>
-                            <button type="button" @click="val = 'Sapphire Crystal Diamond Ring'"
-                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">💍
-                                Diamond Ring</button>
+                                String Lights</button>
+                            <button type="button" @click="val = 'Weatherproof LED Flood Light'"
+                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">🌦️
+                                Flood Light</button>
+                            <button type="button" @click="val = 'Modern LED Table Lamp'"
+                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">🛋️
+                                Table Lamp</button>
+                            <button type="button" @click="val = 'Elegant LED Chandelier'"
+                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">💎
+                                Chandelier</button>
                         </div>
                     </div>
 
@@ -162,7 +338,18 @@
                             document.getElementById('product_image').value = ''; // Clear file input
                             this.dropdownOpen = false; // Close dropdown
                         }
-                    }">
+                    }" @cgi-autofill-data.window="
+                        if ($event.detail._imagePreview) {
+                            imageUrl = $event.detail._imagePreview;
+                            selectedAssetPath = $event.detail._assetPath;
+                            selectedAssetName = $event.detail._isNew ? 'AI Analyzed Reference' : 'Selected from Library';
+                            
+                            // If it's a library asset, ensure the main file input is cleared
+                            if (!$event.detail._isNew) {
+                                document.getElementById('product_image').value = '';
+                            }
+                        }
+                    ">
                         <input type="hidden" name="selected_asset_path" :value="selectedAssetPath">
 
                         <div class="flex items-center gap-1.5 mb-1.5 relative group w-fit">
@@ -307,7 +494,7 @@
                             if (items.includes(word)) { items = items.filter(i => i !== word); } else { items.push(word); }
                             this.val = items.join(', ');
                         }
-                    }">
+                    }" @cgi-autofill-data.window="val = $event.detail.marketing_angle || val">
                         <div class="flex items-center gap-2 mb-2 relative group w-fit">
                             <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">03. Text
                                 You Want To See !</label>
@@ -328,62 +515,267 @@
                             class="w-full bg-black/40 border border-gray-700/80 rounded-xl text-white focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500 p-2.5 outline-none transition-all text-sm shadow-inner placeholder-gray-600">
 
                         <div class="flex gap-1.5 mt-2.5 overflow-x-auto pb-2 custom-scrollbar snap-x">
-                            <button type="button" @click="toggle('ENERGY SAVING')"
-                                :class="val.includes('ENERGY') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
+                            <button type="button" @click="toggle('ENERGY SAVING PERFORMANCE')"
+                                :class="val.includes('ENERGY SAVING') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
                                 class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">⚡
-                                Energy</button>
-                            <button type="button" @click="toggle('PURE LUXURY')"
-                                :class="val.includes('LUXURY') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
+                                Energy Saving</button>
+                            <button type="button" @click="toggle('BRIGHT & UNIFORM ILLUMINATION')"
+                                :class="val.includes('BRIGHT') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
+                                class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">🔆
+                                Bright & Uniform</button>
+                            <button type="button" @click="toggle('LONG LIFESPAN')"
+                                :class="val.includes('LIFESPAN') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
+                                class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">⏳
+                                Long Lifespan</button>
+                            <button type="button" @click="toggle('MODERN & ELEGANT DESIGN')"
+                                :class="val.includes('ELEGANT') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
                                 class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">💎
-                                Luxury</button>
-                            <button type="button" @click="toggle('ULTRA DURABLE')"
-                                :class="val.includes('DURABLE') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
-                                class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">🔨
-                                Durable</button>
-                            <button type="button" @click="toggle('HYPER SPEED')"
-                                :class="val.includes('SPEED') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
-                                class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">🚀
-                                Speed</button>
-                            <button type="button" @click="toggle('ICE COLD')"
-                                :class="val.includes('COLD') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
-                                class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">❄️
-                                Fresh</button>
-                            <button type="button" @click="toggle('ECO FRIENDLY')"
-                                :class="val.includes('ECO') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
+                                Modern & Elegant</button>
+                            <button type="button" @click="toggle('EASY INSTALLATION')"
+                                :class="val.includes('INSTALLATION') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
+                                class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">🔧
+                                Easy Installation</button>
+                            <button type="button" @click="toggle('ENERGY-EFFICIENT LIGHTING SOLUTION')"
+                                :class="val.includes('EFFICIENT') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
                                 class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">🌱
-                                Eco-Friendly</button>
-                            <button type="button" @click="toggle('WIRELESS TECH')"
-                                :class="val.includes('WIRELESS') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
-                                class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">📶
-                                Wireless</button>
-                            <button type="button" @click="toggle('WATER PROOF')"
-                                :class="val.includes('WATER') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
-                                class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">💦
-                                Waterproof</button>
-                            <button type="button" @click="toggle('ADVANCED AI')"
-                                :class="val.includes('AI') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
-                                class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">🧠
-                                AI Tech</button>
-                            <button type="button" @click="toggle('ULTRA LIGHTWEIGHT')"
-                                :class="val.includes('LIGHTWEIGHT') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
-                                class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">🪶
-                                Lightweight</button>
+                                Energy-Efficient</button>
+                            <button type="button" @click="toggle('PERFECT FOR KITCHENS & WASHROOMS')"
+                                :class="val.includes('KITCHENS') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
+                                class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">🍳
+                                Kitchens & Washrooms</button>
+                            <button type="button" @click="toggle('IDEAL FOR HOMES, OFFICES & COMMERCIAL SPACES')"
+                                :class="val.includes('IDEAL FOR HOMES') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
+                                class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">🏠
+                                Homes & Offices</button>
+                            <button type="button" @click="toggle('SUITABLE FOR ALL APPLICATION AREAS')"
+                                :class="val.includes('APPLICATION') ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
+                                class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">📍
+                                Application Areas</button>
                         </div>
                     </div>
 
-                    {{-- 04. Decoration --}}
-                    <div x-data="{ 
-                        selectedProps: [], 
-                        customInput: '',
-                        addProp(item) { if (item.trim() !== '' && !this.selectedProps.includes(item)) { this.selectedProps.push(item.trim()); } this.customInput = ''; },
-                        removeProp(item) { this.selectedProps = this.selectedProps.filter(i => i !== item); },
-                        toggleProp(item) { if (this.selectedProps.includes(item)) { this.removeProp(item); } else { this.addProp(item); } }
-                    }">
-                        <input type="hidden" name="visual_prop" :value="selectedProps.join(', ')">
+                    {{-- 04. Product Usage (searchable dropdown, drives 05. Scene Background) --}}
+                    <div x-data="{
+                        usage: '',
+                        usageLabel: '',
+                        search: '',
+                        open: false,
+                        options: [
+                            { id: 'Tube Light', icon: '📏', label: 'Tube Light (ceiling / wall)', val: 'Tube light installed and glowing on the ceiling or wall', backgrounds: [
+                                { label: '🍳 Modern Kitchen', val: 'Bright modern kitchen with tube lights glowing on the ceiling' },
+                                { label: '🚿 Washroom', val: 'Clean modern washroom lit by ceiling tube lights' },
+                                { label: '💼 Office Space', val: 'Professional office space lit by ceiling tube lights' },
+                                { label: '🏬 Commercial Space', val: 'Spacious commercial space lit by ceiling tube lights' },
+                                { label: '🅿️ Garage / Workshop', val: 'Tidy garage workshop lit by ceiling tube lights' },
+                                { label: '🪞 Bathroom Mirror (wall)', val: 'Bathroom vanity mirror lit by a wall-mounted tube light' },
+                                { label: '🍽️ Under-Cabinet (wall)', val: 'Modern kitchen with wall-mounted under-cabinet tube lights glowing' },
+                                { label: '🛋️ Living Room Wall', val: 'Living room with a wall-mounted tube light glowing along the wall' },
+                                { label: '🛏️ Bedroom Wall', val: 'Cozy bedroom with a wall-mounted tube light glowing above the headboard' }
+                            ]},
+                            { id: 'LED Panel', icon: '🔲', label: 'LED Panel (ceiling)', val: 'LED panel light fitted in the ceiling, switched on', backgrounds: [
+                                { label: '💼 Office Space', val: 'Modern office with recessed LED ceiling panels glowing' },
+                                { label: '🏬 Commercial Space', val: 'Retail commercial space lit by LED ceiling panels' },
+                                { label: '🏥 Clinic / Hospital', val: 'Clean clinic interior with bright LED ceiling panels' },
+                                { label: '🏫 Classroom', val: 'Bright classroom lit by LED ceiling panels' },
+                                { label: '🍳 Modern Kitchen', val: 'Modern kitchen with LED ceiling panel lighting' }
+                            ]},
+                            { id: 'Downlights', icon: '🔆', label: 'Recessed Downlights', val: 'Recessed downlights lighting up the room', backgrounds: [
+                                { label: '🛋️ Living Room', val: 'Cozy modern living room lit by recessed downlights' },
+                                { label: '🍳 Modern Kitchen', val: 'Modern kitchen lit by recessed ceiling downlights' },
+                                { label: '🏨 Hotel Lobby', val: 'Elegant hotel lobby lit by recessed downlights' },
+                                { label: '🍽️ Restaurant / Cafe', val: 'Warm restaurant interior lit by recessed downlights' },
+                                { label: '🛏️ Cozy Bedroom', val: 'Warm cozy bedroom lit by recessed downlights' }
+                            ]},
+                            { id: 'Pendant Bulb', icon: '💡', label: 'Pendant Bulb', val: 'Glowing bulbs in pendant fixtures over the table', backgrounds: [
+                                { label: '👨‍👩‍👧 Family Dining', val: 'Family dining room with glowing pendant bulbs over the table' },
+                                { label: '🍽️ Restaurant / Cafe', val: 'Cozy restaurant with pendant bulb lights over the tables' },
+                                { label: '🍳 Kitchen Island', val: 'Modern kitchen island with glowing pendant bulb lights' },
+                                { label: '🛋️ Living Room', val: 'Stylish living room with pendant bulb lighting' }
+                            ]},
+                            { id: 'String Lights', icon: '✨', label: 'String / Fairy Lights', val: 'Warm string lights strung across the space, glowing', backgrounds: [
+                                { label: '🏡 Patio Gazebo (Night)', val: 'Cozy outdoor wooden patio gazebo at night with warm string lights strung across, glowing' },
+                                { label: '🌳 Garden / Backyard', val: 'Garden backyard at night with warm string lights overhead' },
+                                { label: '🏙️ Rooftop Terrace', val: 'Rooftop terrace at night with warm string lights strung across' },
+                                { label: '💍 Outdoor Event', val: 'Outdoor evening event space with warm string lights overhead' },
+                                { label: '🪟 Balcony', val: 'Cozy balcony at night with warm string lights' }
+                            ]},
+                            { id: 'Wall Light', icon: '🛋️', label: 'Wall Light / Sconce', val: 'Wall-mounted light glowing on the wall', backgrounds: [
+                                { label: '🛋️ Living Room', val: 'Modern living room with wall-mounted lights glowing' },
+                                { label: '🏨 Hotel Lobby', val: 'Elegant hotel lobby with wall sconces glowing' },
+                                { label: '🛏️ Cozy Bedroom', val: 'Cozy bedroom with wall-mounted bedside lights glowing' },
+                                { label: '🚪 Hallway', val: 'Modern hallway lit by wall-mounted lights' },
+                                { label: '🪜 Staircase', val: 'Stylish staircase lit by wall-mounted lights' }
+                            ]},
+                            { id: 'Halogen Sports Floodlight', icon: '🏟️', label: 'Halogen Sports Floodlight', val: 'Halogen floodlights mounted high, brightly illuminating the court', backgrounds: [
+                                { label: '🏸 Badminton Court', val: 'Indoor badminton court brightly lit by overhead halogen floodlights' },
+                                { label: '🎾 Tennis Court', val: 'Outdoor tennis court at night lit by tall halogen floodlights' },
+                                { label: '🏀 Basketball Court', val: 'Indoor basketball court lit by bright overhead floodlights' },
+                                { label: '🏟️ Football Stadium', val: 'Football stadium at night lit by powerful floodlight towers' },
+                                { label: '🏏 Cricket Ground', val: 'Cricket ground at night under bright stadium floodlights' }
+                            ]},
+                            { id: 'Outdoor Flood Light', icon: '🏢', label: 'Outdoor Flood Light', val: 'Flood lights mounted and washing the area with bright light', backgrounds: [
+                                { label: '🏢 Building Facade', val: 'Building facade at night lit up by mounted flood lights' },
+                                { label: '🅿️ Parking Lot', val: 'Outdoor parking lot at night lit by flood lights' },
+                                { label: '🏭 Warehouse Yard', val: 'Warehouse yard at night illuminated by flood lights' },
+                                { label: '🌳 Garden Landscape', val: 'Garden landscape at night washed with flood lighting' },
+                                { label: '🪧 Billboard / Signage', val: 'Large outdoor billboard lit by flood lights at night' }
+                            ]},
+                            { id: 'High Bay Light', icon: '🏭', label: 'High Bay Light', val: 'High bay lights suspended from a tall ceiling, illuminating below', backgrounds: [
+                                { label: '🏭 Factory Floor', val: 'Industrial factory floor lit by high bay lights from a tall ceiling' },
+                                { label: '📦 Warehouse', val: 'Large warehouse lit by rows of high bay lights' },
+                                { label: '🤾 Indoor Gymnasium', val: 'Indoor sports gymnasium lit by high bay lights' },
+                                { label: '🛒 Mall Atrium', val: 'Shopping mall atrium lit by high bay lights' },
+                                { label: '✈️ Aircraft Hangar', val: 'Aircraft hangar interior lit by high bay lights' }
+                            ]},
+                            { id: 'Street Light', icon: '🌃', label: 'Street Light', val: 'Street lights mounted on poles, illuminating the road at night', backgrounds: [
+                                { label: '🌃 City Street', val: 'City street at night illuminated by rows of street lights' },
+                                { label: '🛣️ Highway', val: 'Highway at night lit by tall street lights' },
+                                { label: '🏘️ Residential Road', val: 'Quiet residential road at night lit by street lights' },
+                                { label: '🌳 Park Pathway', val: 'Park pathway at night lit by garden street lamps' },
+                                { label: '🅿️ Parking Lot', val: 'Parking lot at night lit by pole-mounted street lights' }
+                            ]},
+                            { id: 'Spotlight / Track', icon: '🎯', label: 'Spotlight / Track Light', val: 'Spotlights and track lights highlighting objects on display', backgrounds: [
+                                { label: '🖼️ Art Gallery', val: 'Art gallery with spotlights highlighting framed artworks' },
+                                { label: '🛍️ Retail Store', val: 'Modern retail store with track lights highlighting products' },
+                                { label: '🏛️ Museum', val: 'Museum exhibit lit by focused spotlights' },
+                                { label: '🚗 Showroom', val: 'Car showroom with spotlights highlighting a vehicle' },
+                                { label: '💍 Jewelry Display', val: 'Jewelry display case lit by bright focused spotlights' }
+                            ]},
+                            { id: 'Garden / Landscape', icon: '🪴', label: 'Garden / Landscape Light', val: 'Landscape lights placed along the ground, glowing softly', backgrounds: [
+                                { label: '🪴 Garden Path', val: 'Garden pathway at night lined with glowing landscape lights' },
+                                { label: '🏡 Building Entrance', val: 'Building entrance at night lit by landscape lights' },
+                                { label: '🏊 Poolside', val: 'Poolside at night lit by soft landscape lights' },
+                                { label: '🚗 Driveway', val: 'Driveway at night lined with landscape lights' },
+                                { label: '🌳 Backyard', val: 'Backyard garden at night with glowing landscape lighting' }
+                            ]},
+                            { id: 'Pool / Underwater', icon: '🏊', label: 'Pool / Underwater Light', val: 'Underwater lights glowing beneath the water surface', backgrounds: [
+                                { label: '🏊 Swimming Pool', val: 'Swimming pool at night glowing with underwater lights' },
+                                { label: '⛲ Fountain', val: 'Decorative fountain glowing with underwater lights at night' },
+                                { label: '🛁 Spa / Jacuzzi', val: 'Luxury spa jacuzzi glowing with underwater lighting' },
+                                { label: '💧 Water Feature', val: 'Garden water feature glowing with underwater lights' }
+                            ]},
+                            { id: 'Chandelier', icon: '💎', label: 'Chandelier', val: 'An elegant chandelier hanging and glowing from the ceiling', backgrounds: [
+                                { label: '🎉 Banquet Hall', val: 'Grand banquet hall with a glowing chandelier overhead' },
+                                { label: '🏨 Hotel Lobby', val: 'Luxury hotel lobby with an elegant glowing chandelier' },
+                                { label: '🍽️ Dining Room', val: 'Elegant dining room with a glowing chandelier over the table' },
+                                { label: '💃 Ballroom', val: 'Ballroom with a sparkling chandelier lighting the room' },
+                                { label: '🪜 Grand Staircase', val: 'Grand staircase lit by a hanging chandelier' }
+                            ]},
+                            { id: 'Table / Desk Lamp', icon: '🛋️', label: 'Table / Desk Lamp', val: 'A table lamp switched on, casting a warm pool of light', backgrounds: [
+                                { label: '📚 Study Desk', val: 'Study desk at night with a glowing table lamp' },
+                                { label: '🛏️ Bedside Table', val: 'Bedside table at night with a warm glowing lamp' },
+                                { label: '💼 Office Desk', val: 'Modern office desk with a desk lamp switched on' },
+                                { label: '📖 Reading Nook', val: 'Cozy reading nook lit by a warm table lamp' }
+                            ]},
+                            { id: 'Emergency / Exit', icon: '🚪', label: 'Emergency / Exit Light', val: 'Emergency exit lights glowing along the route', backgrounds: [
+                                { label: '🚪 Corridor', val: 'Building corridor with glowing emergency exit lights' },
+                                { label: '🪜 Stairwell', val: 'Stairwell lit by emergency exit lights' },
+                                { label: '🏢 Office Exit', val: 'Office exit route lit by emergency lights' },
+                                { label: '🅿️ Parking Garage', val: 'Underground parking garage lit by emergency lights' }
+                            ]}
+                        ],
+                        pick(opt) {
+                            this.usage = opt.val;
+                            this.usageLabel = opt.icon + '  ' + opt.label;
+                            this.open = false;
+                            this.search = '';
+                            $dispatch('usage-changed', { backgrounds: opt.backgrounds || [] });
+                        },
+                        productKeywords: {
+                            'Tube Light': ['tube', 'batten', 't5', 't8'],
+                            'LED Panel': ['panel', 'ceiling panel', 'flat panel', 'slim panel'],
+                            'Downlights': ['downlight', 'recessed'],
+                            'Pendant Bulb': ['bulb', 'pendant', 'smart rgb', 'led bulb'],
+                            'String Lights': ['string', 'fairy'],
+                            'Wall Light': ['wall light', 'sconce'],
+                            'Halogen Sports Floodlight': ['halogen', 'badminton', 'sports flood', 'stadium'],
+                            'Outdoor Flood Light': ['flood light', 'floodlight', 'outdoor flood', 'weatherproof'],
+                            'High Bay Light': ['high bay', 'warehouse'],
+                            'Street Light': ['street', 'pole light'],
+                            'Spotlight / Track': ['spotlight', 'track light'],
+                            'Garden / Landscape': ['landscape', 'garden light'],
+                            'Pool / Underwater': ['pool', 'underwater'],
+                            'Chandelier': ['chandelier'],
+                            'Table / Desk Lamp': ['table lamp', 'desk lamp'],
+                            'Emergency / Exit': ['emergency', 'exit light']
+                        },
+                        scoreUsage(opt, hint, productName) {
+                            const t = (hint || '').toLowerCase();
+                            const p = (productName || '').toLowerCase();
+                            const id = (opt.id || '').toLowerCase();
+                            const label = (opt.label || '').toLowerCase();
+                            const val = (opt.val || '').toLowerCase();
+                            let score = 0;
+                            if (t && (t === val || t === id)) score = 100;
+                            else if (t && (val.includes(t) || t.includes(val.slice(0, 20)))) score = 70;
+                            else if (t && id && t.includes(id)) score = 60;
+                            const kws = this.productKeywords[opt.id] || [];
+                            for (const kw of kws) {
+                                if ((t && t.includes(kw)) || (p && p.includes(kw))) score = Math.max(score, 55);
+                            }
+                            return score;
+                        },
+                        matchUsageFromDetail(detail) {
+                            const hint = detail.visual_prop || '';
+                            const productName = detail.product_name || '';
+                            let best = null, bestScore = 0;
+                            for (const opt of this.options) {
+                                const s = this.scoreUsage(opt, hint, productName);
+                                if (s > bestScore) { bestScore = s; best = opt; }
+                            }
+                            return bestScore >= 30 ? best : null;
+                        },
+                        matchBackground(hint, backgrounds) {
+                            if (!backgrounds || !backgrounds.length) return null;
+                            const t = (hint || '').toLowerCase().trim();
+                            if (!t) return null;
+                            let best = null, bestScore = 0;
+                            for (const bg of backgrounds) {
+                                const val = (bg.val || '').toLowerCase();
+                                const label = (bg.label || '').toLowerCase();
+                                let score = 0;
+                                if (t === val) score = 100;
+                                else if (val.includes(t) || t.includes(val)) score = 80;
+                                else if (label && (t.includes(label.replace(/[^\w\s]/g, '').trim()) || label.includes(t))) score = 55;
+                                else {
+                                    const words = t.split(/\s+/).filter(w => w.length > 3);
+                                    for (const w of words) {
+                                        if (val.includes(w) || label.includes(w)) score += 8;
+                                    }
+                                }
+                                if (score > bestScore) { bestScore = score; best = bg; }
+                            }
+                            return bestScore >= 20 ? best : null;
+                        },
+                        resolveBackgroundVal(hint, backgrounds) {
+                            const trimmed = (hint || '').trim();
+                            if (!backgrounds || !backgrounds.length) return trimmed;
+                            const matched = this.matchBackground(trimmed, backgrounds);
+                            if (matched) return matched.val;
+                            if (trimmed) return trimmed;
+                            return backgrounds[0]?.val || '';
+                        }
+                    }"
+                    @cgi-autofill-reset.window="usage = ''; usageLabel = ''; $dispatch('usage-changed', { backgrounds: [] });"
+                    @cgi-autofill-data.window="
+                        const opt = matchUsageFromDetail($event.detail);
+                        if (opt) {
+                            pick(opt);
+                            const bgVal = resolveBackgroundVal($event.detail.atmosphere || '', opt.backgrounds);
+                            $dispatch('cgi-autofill-background', { backgrounds: opt.backgrounds, val: bgVal });
+                        } else {
+                            usage = '';
+                            usageLabel = '';
+                            $dispatch('usage-changed', { backgrounds: [] });
+                            const atmOnly = ($event.detail.atmosphere || '').trim();
+                            $dispatch('cgi-autofill-background', { backgrounds: [], val: atmOnly });
+                        }
+                    ">
+                        <input type="hidden" name="visual_prop" :value="usage">
 
                         <div class="flex items-center gap-2 mb-2 relative group w-fit">
                             <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">04.
-                                Objects next to product.</label>
+                                How is the product used in the scene?</label>
                             <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -392,49 +784,64 @@
                             </div>
                             <div
                                 class="absolute left-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-gray-800 border border-gray-700 text-[10px] text-gray-300 rounded-xl shadow-2xl z-[60] leading-relaxed">
-                                <strong class="text-white block mb-1">Guide:</strong> Add props or natural elements
-                                around your product to give the scene context, scale, and visual depth.
+                                <strong class="text-white block mb-1">Guide:</strong> Search and pick the light type and
+                                how it is used (e.g. halogen floodlight on a badminton court). Your choice decides which
+                                matching scene backgrounds appear in step 05.
                             </div>
                         </div>
 
-                        <div
-                            class="w-full bg-black/40 border border-gray-700/80 rounded-xl p-1.5 flex flex-wrap gap-1.5 transition-all focus-within:ring-1 focus-within:ring-blue-500/50 shadow-inner">
-                            <template x-for="prop in selectedProps" :key="prop">
-                                <div
-                                    class="flex items-center gap-1.5 bg-blue-600/20 border border-blue-500/40 text-blue-300 px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider">
-                                    <span x-text="prop"></span>
-                                    <button type="button" @click="removeProp(prop)"
-                                        class="hover:text-white text-blue-500/50 transition-colors leading-none">✕</button>
-                                </div>
-                            </template>
-                            <input type="text" x-model="customInput" @keydown.enter.prevent="addProp(customInput)"
-                                @keydown.comma.prevent="addProp(customInput)" @blur="addProp(customInput)"
-                                placeholder="Type & Enter..."
-                                class="flex-1 min-w-[120px] bg-transparent border-none text-white text-[11px] p-1 outline-none focus:ring-0 placeholder-gray-600">
-                        </div>
+                        {{-- Searchable dropdown --}}
+                        <div class="relative">
+                            <button type="button" @click="open = !open"
+                                class="w-full bg-[#111] border border-gray-700/80 rounded-xl p-2.5 flex items-center justify-between hover:border-blue-500/50 transition-all focus:ring-1 focus:ring-blue-500/50 h-[42px]">
+                                <span class="text-[11px] font-bold truncate"
+                                    :class="usageLabel ? 'text-gray-200' : 'text-gray-500'"
+                                    x-text="usageLabel || 'Select how the product is used...'"></span>
+                                <svg class="w-3.5 h-3.5 text-gray-500 shrink-0 ml-1 transition-transform"
+                                    :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
 
-                        <div class="flex gap-1.5 mt-2.5 overflow-x-auto pb-2 custom-scrollbar snap-x">
-                            <template x-for="item in [
-                                {id: 'Marble', val: 'Polished Marble Slab', icon: '🪨'}, {id: 'Water', val: 'Splashing Water Wave', icon: '💧'},
-                                {id: 'Chrome', val: 'Floating Chrome Spheres', icon: '🟠'}, {id: 'Leaves', val: 'Tropical Palm Leaves', icon: '🍃'},
-                                {id: 'Rock', val: 'Jagged Volcanic Rocks', icon: '🌋'}, {id: 'Energy', val: 'Abstract Glowing Fibers', icon: '⚡'},
-                                {id: 'Ice', val: 'Shattered Crystal Ice', icon: '🧊'}, {id: 'Dust', val: 'Floating Gold Dust', icon: '✨'},
-                                {id: 'Clouds', val: 'Soft Cloud Puffs', icon: '☁️'}, {id: 'Laser', val: 'Red Laser Grid', icon: '🔴'},
-                                {id: 'Blocks', val: 'Geometric Floating Blocks', icon: '🛑'}, {id: 'Petals', val: 'Falling Rose Petals', icon: '🌹'}
-                            ]" :key="item.id">
-                                <button type="button" @click="toggleProp(item.val)"
-                                    :class="selectedProps.includes(item.val) ? 'bg-blue-600 border-blue-400 text-white' : 'bg-gray-800/40 text-gray-400 border-gray-700 text-gray-400 hover:text-white hover:border-blue-500/50'"
-                                    class="shrink-0 px-2 py-1 border rounded-md text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-1.5">
-                                    <span x-text="item.icon"></span><span x-text="item.id"></span>
-                                </button>
-                            </template>
+                            <div x-show="open" @click.away="open = false" x-cloak
+                                class="absolute left-0 right-0 top-full mt-1 bg-[#1a1a1a] border border-gray-700 rounded-xl shadow-2xl z-[70] flex flex-col overflow-hidden">
+                                <div class="p-2 border-b border-gray-800 bg-[#111]">
+                                    <div class="relative">
+                                        <svg class="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                        </svg>
+                                        <input type="text" x-model="search" placeholder="Search light usage..."
+                                            class="w-full bg-[#0a0a0a] border border-gray-700 rounded-md pl-7 pr-2 py-1.5 text-white text-[10px] focus:border-blue-500 outline-none transition-all placeholder-gray-600">
+                                    </div>
+                                </div>
+                                <div class="max-h-56 overflow-y-auto custom-scrollbar p-1">
+                                    <template x-for="opt in options" :key="opt.id">
+                                        <button type="button"
+                                            x-show="(opt.label + ' ' + opt.id + ' ' + opt.val).toLowerCase().includes(search.toLowerCase())"
+                                            @click="pick(opt)"
+                                            :class="usage === opt.val ? 'bg-blue-600/20 border border-blue-500/30' : 'border border-transparent'"
+                                            class="w-full flex items-center gap-2 p-2 rounded hover:bg-blue-600/20 transition-colors text-left">
+                                            <span class="text-base leading-none shrink-0" x-text="opt.icon"></span>
+                                            <span class="text-[10px] font-bold text-gray-200 truncate flex-1" x-text="opt.label"></span>
+                                            <div x-show="usage === opt.val" class="shrink-0 text-blue-500 pr-1">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                                            </div>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     {{-- 05. Background & 06. Movement --}}
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6 md:col-span-1">
-                        {{-- 05. Background --}}
-                        <div x-data="{ val: '' }">
+                        {{-- 05. Background (suggestions depend on step 04) --}}
+                        <div x-data="{
+                            val: '',
+                            options: []
+                        }" @usage-changed.window="options = $event.detail.backgrounds || [];"
+                           @cgi-autofill-reset.window="val = ''; options = [];"
+                           @cgi-autofill-background.window="options = $event.detail.backgrounds || []; val = $event.detail.val || '';">
                             <div class="flex items-center gap-2 mb-2 relative group w-fit">
                                 <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">05.
                                     Scene Background.</label>
@@ -446,34 +853,34 @@
                                 </div>
                                 <div
                                     class="absolute left-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-gray-800 border border-gray-700 text-[10px] text-gray-300 rounded-xl shadow-2xl z-[60] leading-relaxed">
-                                    <strong class="text-white block mb-1">Guide:</strong> Describe the environment or
-                                    overall setting where your product is placed. Keep it atmospheric.
+                                    <strong class="text-white block mb-1">Guide:</strong> Pick a suggested scene based on
+                                    how the product is used (step 04), or type your own custom background below.
                                 </div>
                             </div>
-                            <input type="text" name="atmosphere" x-model="val"
-                                placeholder="Type custom scene or select..." required
+
+                            {{-- Manual input (always available) — this is the submitted value --}}
+                            <input type="text" name="atmosphere" x-model="val" required
+                                placeholder="Type a custom scene, or pick a suggestion below..."
                                 class="w-full bg-black/40 border border-gray-700/80 rounded-xl text-white focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500 p-2.5 outline-none transition-all text-sm shadow-inner placeholder-gray-600">
 
-                            <select x-model="val"
+                            {{-- Dependent scene suggestions from step 04 (fills the input above) --}}
+                            <select x-show="options.length > 0" x-cloak x-model="val"
                                 class="w-full mt-2 bg-gray-800/40 border border-gray-700 rounded-lg text-[10px] text-gray-300 p-1.5 outline-none font-bold uppercase tracking-widest cursor-pointer">
-                                <option value="">-- Quick Select --</option>
-                                <option value="Misty Morning Forest">🌲 Misty Forest</option>
-                                <option value="Luxury Penthouse Skyline">🏙️ City Skyline</option>
-                                <option value="Underwater Sunbeams">🌊 Ocean Depth</option>
-                                <option value="Neon Cyberpunk Tokyo">🏮 Cyberpunk Tokyo</option>
-                                <option value="Minimal High-Tech Lab">🔬 Clean Tech Lab</option>
-                                <option value="Cozy Minimalist Studio">🏠 Photo Studio</option>
-                                <option value="Mars Martian Surface">🪐 Martian Surface</option>
-                                <option value="Lush Tropical Rainforest">🌴 Lush Rainforest</option>
-                                <option value="High-Altitude Cloudscape">☁️ High Cloudscape</option>
-                                <option value="Ancient Temple Ruins">🏛️ Ancient Ruins</option>
-                                <option value="Neon Retrowave Grid">🪩 Retrowave Grid</option>
-                                <option value="Stark White Infinity Cove">⚪ Infinity Cove</option>
+                                <option value="">-- Suggested scenes for step 04 --</option>
+                                <template x-for="bg in options" :key="bg.val">
+                                    <option :value="bg.val" x-text="bg.label"></option>
+                                </template>
                             </select>
+
+                            {{-- Hint shown until a usage is chosen in step 04 --}}
+                            <p x-show="options.length === 0"
+                                class="mt-2 text-[9px] text-gray-500 font-bold uppercase tracking-widest">
+                                Pick option 04 to load matching scene suggestions — or just type your own above.
+                            </p>
                         </div>
 
                         {{-- 06. Movement --}}
-                        <div x-data="{ val: '' }">
+                        <div x-data="{ val: '' }" @cgi-autofill-data.window="val = $event.detail.camera_motion || $event.detail.movement || $event.detail.camera || val">
                             <div class="flex items-center gap-2 mb-2 relative group w-fit">
                                 <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">06.
                                     Camera Style.</label>
@@ -513,7 +920,7 @@
                     </div>
 
                     {{-- 07. Layout --}}
-                    <div class="md:col-span-1" x-data="{ comp: '' }">
+                    <div class="md:col-span-1" x-data="{ comp: '' }" @cgi-autofill-data.window="comp = $event.detail.composition || $event.detail.layout || $event.detail.position || comp">
                         <div class="flex items-center gap-2 mb-2 relative group w-fit">
                             <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">07.
                                 Product Possitioning?</label>
@@ -599,7 +1006,7 @@
                     </div>
 
                     {{-- 08. Lighting --}}
-                    <div class="md:col-span-1" x-data="{ light: '' }">
+                    <div class="md:col-span-1" x-data="{ light: '' }" @cgi-autofill-data.window="light = $event.detail.lighting_style || $event.detail.lighting || $event.detail.light || light">
                         <div class="flex items-center gap-2 mb-2 relative group w-fit">
                             <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">08.
                                 Lighting & Color preference.</label>
@@ -621,77 +1028,77 @@
                             class="w-full bg-black/40 border border-gray-700/80 rounded-xl text-white focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500 p-2.5 outline-none transition-all text-sm shadow-inner placeholder-gray-600 mb-2.5">
 
                         <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                            <div @click="light = 'Movie Style: High contrast, cinematic glow'"
-                                :class="light.includes('Movie') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
-                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
-                                <span class="text-sm block mb-0.5">🎬</span>
-                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Movie</h4>
-                            </div>
-                            <div @click="light = 'Warm Sunset: Golden hour glow'"
-                                :class="light.includes('Sunset') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
-                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
-                                <span class="text-sm block mb-0.5">🌅</span>
-                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Sunset</h4>
-                            </div>
-                            <div @click="light = 'Clean Studio: White softbox lighting'"
-                                :class="light.includes('Clean') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
-                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
-                                <span class="text-sm block mb-0.5">💡</span>
-                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Clean</h4>
-                            </div>
-                            <div @click="light = 'Cyber Neon: Pink & Blue glow'"
-                                :class="light.includes('Neon') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
-                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
-                                <span class="text-sm block mb-0.5">🟣</span>
-                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Neon</h4>
-                            </div>
-                            <div @click="light = 'Midnight Blue: Cold moonlight shadows'"
-                                :class="light.includes('Midnight') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
-                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
-                                <span class="text-sm block mb-0.5">🌙</span>
-                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Moon</h4>
-                            </div>
-                            <div @click="light = 'Earth Tones: Natural browns and greens'"
-                                :class="light.includes('Earth') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
-                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
-                                <span class="text-sm block mb-0.5">🍂</span>
-                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Earth</h4>
-                            </div>
-                            <div @click="light = 'Noir: High contrast black and white'"
-                                :class="light.includes('Noir') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
-                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
-                                <span class="text-sm block mb-0.5">🌑</span>
-                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Noir</h4>
-                            </div>
-                            <div @click="light = 'Dreamy Glow: Soft hazy highlights'"
-                                :class="light.includes('Dreamy') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
-                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
-                                <span class="text-sm block mb-0.5">☁️</span>
-                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Soft</h4>
-                            </div>
-                            <div @click="light = 'Prism Holographic: Iridescent rainbow refractions'"
-                                :class="light.includes('Prism') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
-                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
-                                <span class="text-sm block mb-0.5">🌈</span>
-                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Prism</h4>
-                            </div>
-                            <div @click="light = 'Harsh Flash: Direct paparazzi style flash photography'"
-                                :class="light.includes('Harsh Flash') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
-                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
-                                <span class="text-sm block mb-0.5">📸</span>
-                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Flash</h4>
-                            </div>
-                            <div @click="light = 'Dramatic Spotlight: Dark room, single hard spotlight'"
-                                :class="light.includes('Spotlight') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
-                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
-                                <span class="text-sm block mb-0.5">🔦</span>
-                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Spotlight</h4>
-                            </div>
-                            <div @click="light = 'Warm Firelight: Flickering orange and yellow shadows'"
-                                :class="light.includes('Firelight') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                            <div @click="light = 'Warm white glow, cozy 3000K warm light spilling naturally from the product'"
+                                :class="light.includes('Warm white') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
                                 class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
                                 <span class="text-sm block mb-0.5">🔥</span>
-                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Fire</h4>
+                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Warm White</h4>
+                            </div>
+                            <div @click="light = 'Natural daylight white, crisp 6500K cool white illumination'"
+                                :class="light.includes('daylight') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
+                                <span class="text-sm block mb-0.5">☀️</span>
+                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Daylight</h4>
+                            </div>
+                            <div @click="light = 'Bright and uniform illumination filling the whole space evenly'"
+                                :class="light.includes('uniform') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
+                                <span class="text-sm block mb-0.5">🔆</span>
+                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Uniform</h4>
+                            </div>
+                            <div @click="light = 'Soft ambient indoor glow, gentle relaxing mood lighting'"
+                                :class="light.includes('ambient') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
+                                <span class="text-sm block mb-0.5">💡</span>
+                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Soft Ambient</h4>
+                            </div>
+                            <div @click="light = 'Golden evening warmth, sunset ambiance glow'"
+                                :class="light.includes('evening') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
+                                <span class="text-sm block mb-0.5">🌅</span>
+                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Evening</h4>
+                            </div>
+                            <div @click="light = 'Festive warm string light glow, cozy fairy lights ambiance'"
+                                :class="light.includes('Festive') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
+                                <span class="text-sm block mb-0.5">✨</span>
+                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Festive</h4>
+                            </div>
+                            <div @click="light = 'Clean white minimal studio lighting, bright and pure'"
+                                :class="light.includes('minimal') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
+                                <span class="text-sm block mb-0.5">⚪</span>
+                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Clean</h4>
+                            </div>
+                            <div @click="light = 'Dark night scene illuminated only by the product glow'"
+                                :class="light.includes('night scene') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
+                                <span class="text-sm block mb-0.5">🌙</span>
+                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Night Glow</h4>
+                            </div>
+                            <div @click="light = 'Warm intimate dining ambiance lighting over the table'"
+                                :class="light.includes('dining ambiance') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
+                                <span class="text-sm block mb-0.5">🍽️</span>
+                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Dining</h4>
+                            </div>
+                            <div @click="light = 'Modern elegant accent lighting, sleek and stylish'"
+                                :class="light.includes('accent') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
+                                <span class="text-sm block mb-0.5">💎</span>
+                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Accent</h4>
+                            </div>
+                            <div @click="light = 'Bright clean commercial space lighting, professional and even'"
+                                :class="light.includes('commercial') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
+                                <span class="text-sm block mb-0.5">🏬</span>
+                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Commercial</h4>
+                            </div>
+                            <div @click="light = 'Cozy warm home ambiance, inviting and relaxing light'"
+                                :class="light.includes('home ambiance') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                                class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
+                                <span class="text-sm block mb-0.5">🏡</span>
+                                <h4 class="text-[8px] font-bold uppercase tracking-wider">Cozy Home</h4>
                             </div>
                         </div>
                     </div>

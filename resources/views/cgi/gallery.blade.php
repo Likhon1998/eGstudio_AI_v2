@@ -26,6 +26,7 @@
             openModal: false, 
             currentVideo: '', 
             filter: 'all',
+            clientFilter: 'all', 
             async forceDownload(url, filename) {
                 try {
                     $dispatch('notify', { message: 'Preparing Download...', type: 'info' });
@@ -44,11 +45,34 @@
                     $dispatch('notify', { message: 'Download Failed', type: 'error' });
                     window.open(url, '_blank');
                 }
+            },
+
+            submittingId: null,
+            async submitForApproval(genId, mediaUrl, mediaType, variant, isBranded) {
+                this.submittingId = mediaUrl;
+                try {
+                    const response = await fetch('{{ route('approvals.submit') }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                        body: JSON.stringify({ cgi_generation_id: genId, media_url: mediaUrl, media_type: mediaType, variant: variant, is_branded: isBranded })
+                    });
+                    const data = await response.json();
+                    if (response.ok && data.success) {
+                        $dispatch('notify', { message: 'Sent for client approval', type: 'success' });
+                        setTimeout(() => location.reload(), 900);
+                    } else {
+                        $dispatch('notify', { message: data.message || 'Submission failed', type: 'error' });
+                    }
+                } catch (e) {
+                    $dispatch('notify', { message: 'Server error while submitting', type: 'error' });
+                } finally {
+                    this.submittingId = null;
+                }
             }
          }">
         
         {{-- Header & Filter Bar --}}
-        <div class="flex flex-col md:flex-row items-center justify-between px-8 py-6 border-b border-white/5 bg-[#0a0a0a] gap-6">
+        <div class="flex flex-col xl:flex-row items-center justify-between px-8 py-6 border-b border-white/5 bg-[#0a0a0a] gap-6">
             <div>
                 <h1 class="text-[13px] font-black text-white tracking-[0.2em] uppercase flex items-center gap-3">
                     <span class="w-1 h-5 bg-pink-600 rounded-full shadow-[0_0_10px_rgba(219,39,119,0.5)]"></span>
@@ -57,7 +81,7 @@
                 <p class="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">Asset Pipeline Repository</p>
             </div>
 
-            {{-- Filter Controller --}}
+            {{-- Asset Type Filters (All / Branded / Raw) --}}
             <div class="flex items-center bg-white/5 p-1 rounded-xl border border-white/5 backdrop-blur-md">
                 <button @click="filter = 'all'" 
                     :class="filter === 'all' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'"
@@ -76,98 +100,69 @@
                     class="px-5 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all">
                     Raw (No Logo)
                 </button>
+
+                <button @click="filter = 'merged'" 
+                    :class="filter === 'merged' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'text-gray-500 hover:text-gray-300'"
+                    class="px-5 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all">
+                    Merged Video
+                </button>
             </div>
 
-            <a href="{{ route('dashboard') }}" class="px-6 py-2 bg-white text-black text-[10px] font-black rounded-lg transition-all uppercase tracking-widest hover:bg-pink-600 hover:text-white">Dashboard</a>
+            {{-- Right Controls (Dropdown + Dashboard Button) --}}
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+                
+                {{-- Client Dropdown (Strictly visible to admins only) --}}
+                @if($isAdmin && isset($clients) && $clients->count() > 0)
+                <div class="relative w-full sm:w-auto">
+                    <select x-model="clientFilter" 
+                            class="w-full sm:w-64 appearance-none bg-white/5 border border-white/10 text-white pl-4 pr-10 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all cursor-pointer">
+                        <option value="all" class="bg-[#0a0a0a] text-white font-bold">Show All Clients</option>
+                        @foreach($clients as $client)
+                            <option value="{{ $client->id }}" class="bg-[#0a0a0a] text-white">
+                                {{ $client->name ?? 'Client #'.$client->id }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-white/40">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                </div>
+                @endif
+
+                <a href="{{ route('dashboard') }}" class="w-full sm:w-auto text-center px-6 py-2.5 bg-white text-black text-[10px] font-black rounded-lg transition-all uppercase tracking-widest hover:bg-pink-600 hover:text-white whitespace-nowrap shadow-lg shadow-white/5">Dashboard</a>
+            </div>
         </div>
 
-        {{-- Content Grid --}}
-        <div class="p-8 flex-1">
-            @if($videos->isEmpty())
+        {{-- Main Content Grid (Now takes up full width) --}}
+        <div class="p-8 flex-1 overflow-y-auto">
+            @if($assets->total() === 0)
                 <div class="col-span-full py-32 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2rem] bg-white/[0.01]">
                     <h3 class="text-[11px] font-black text-gray-600 uppercase tracking-[0.3em]">No Rendered Assets</h3>
                 </div>
             @else
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                    @foreach($videos as $video)
-                        
-                        {{-- 1. Branded Video Card --}}
-                        @if($video->branded_video_url)
-                        @can('view_branded_assets')
-                        <div x-show="filter === 'all' || filter === 'branded'" 
-                             x-transition:enter="transition ease-out duration-300"
-                             x-transition:enter-start="opacity-0 transform scale-95"
-                             x-transition:enter-end="opacity-100 transform scale-100"
-                             class="group bg-[#0a0a0a] border border-blue-500/20 rounded-2xl overflow-hidden shadow-2xl transition-all hover:border-blue-500">
-                             <!-- ... (rest of video card content) ... -->
-                            <div class="relative aspect-video bg-black cursor-pointer" @click="openModal=true; currentVideo='{{ str_starts_with($video->branded_video_url, 'http') ? $video->branded_video_url : asset('storage/' . $video->branded_video_url) }}'">
-                                <img src="{{ str_starts_with($video->branded_image_url, 'http') ? $video->branded_image_url : asset('storage/' . $video->branded_image_url) }}" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity">
-                                <div class="absolute inset-0 flex items-center justify-center">
-                                    <div class="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-2xl"><svg class="w-5 h-5 fill-current ml-1" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
-                                </div>
-                                <span class="absolute top-4 left-4 px-2 py-1 bg-blue-600 text-[8px] font-black text-white uppercase rounded tracking-widest">Logo Applied</span>
-                            </div>
-                            <div class="p-5">
-                                <h3 class="text-[11px] font-black text-white uppercase truncate">{{ $video->product_name }}</h3>
-                                <div class="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
-                                    <span class="text-[8px] text-blue-500 font-bold uppercase tracking-widest">Master Production</span>
-                                    <button @click.stop="forceDownload('{{ str_starts_with($video->branded_video_url, 'http') ? $video->branded_video_url : asset('storage/' . $video->branded_video_url) }}', 'branded-{{ $video->id }}.mp4')" 
-                                            class="text-gray-600 hover:text-white transition-colors">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        @endcan
-                        @endif
-
-                        {{-- 2. Raw Video Card --}}
-                        @if($video->video_url)
-                        <div x-show="filter === 'all' || filter === 'raw'" 
-                             x-transition:enter="transition ease-out duration-300"
-                             x-transition:enter-start="opacity-0 transform scale-95"
-                             x-transition:enter-end="opacity-100 transform scale-100"
-                             class="group bg-[#0a0a0a] border border-pink-500/10 rounded-2xl overflow-hidden shadow-2xl transition-all hover:border-pink-500/40">
-                            <div class="relative aspect-video bg-black cursor-pointer" @click="openModal=true; currentVideo='{{ str_starts_with($video->video_url, 'http') ? $video->video_url : asset('storage/' . $video->video_url) }}'">
-                                <img src="{{ str_starts_with($video->image_url, 'http') ? $video->image_url : asset('storage/' . $video->image_url) }}" class="w-full h-full object-cover opacity-40 group-hover:opacity-100 transition-opacity">
-                                <div class="absolute inset-0 flex items-center justify-center">
-                                    <div class="w-12 h-12 bg-pink-600 text-white rounded-full flex items-center justify-center shadow-2xl"><svg class="w-5 h-5 fill-current ml-1" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
-                                </div>
-                                <span class="absolute top-4 left-4 px-2 py-1 bg-pink-600 text-[8px] font-black text-white uppercase rounded tracking-widest">No Logo</span>
-                            </div>
-                            <div class="p-5">
-                                <h3 class="text-[11px] font-black text-white uppercase truncate">{{ $video->product_name }}</h3>
-                                <div class="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
-                                    <span class="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Raw Render</span>
-                                    <button @click.stop="forceDownload('{{ str_starts_with($video->video_url, 'http') ? $video->video_url : asset('storage/' . $video->video_url) }}', 'raw-{{ $video->id }}.mp4')" 
-                                            class="text-gray-600 hover:text-white transition-colors">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        @endif
-
+                    @foreach($assets as $asset)
+                        @include('partials.gallery.cgi-video-asset-card', ['asset' => $asset, 'requiresApproval' => $requiresApproval])
                     @endforeach
                 </div>
-            @endif
 
-            {{-- Video Player Modal --}}
-            <template x-teleport="body">
-                <div x-show="openModal" class="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-black/95 backdrop-blur-2xl" x-cloak>
-                    {{-- Notice: added currentVideo = '' to @click.away so it clears the source! --}}
-                    <div class="relative w-full max-w-5xl" @click.away="openModal = false; currentVideo = '';">
-                        <button @click="openModal = false; currentVideo = '';" class="absolute -top-12 right-0 text-white font-black hover:text-pink-500 uppercase text-[10px] tracking-[0.2em]">Close ✕</button>
-                        <div class="bg-black rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
-                            {{-- By wrapping in x-if, Alpine destroys the video when the modal closes --}}
-                            <template x-if="openModal">
-                                <video :src="currentVideo" class="w-full max-h-[80vh]" controls autoplay loop playsinline></video>
-                            </template>
-                        </div>
+                {{ $assets->links('vendor.pagination.gallery') }}
+            @endif
+        </div>
+
+        {{-- Video Player Modal --}}
+        <template x-teleport="body">
+            <div x-show="openModal" class="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-black/95 backdrop-blur-2xl" x-cloak>
+                <div class="relative w-full max-w-5xl" @click.away="openModal = false; currentVideo = '';">
+                    <button @click="openModal = false; currentVideo = '';" class="absolute -top-12 right-0 text-white font-black hover:text-pink-500 uppercase text-[10px] tracking-[0.2em]">Close ✕</button>
+                    <div class="bg-black rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+                        <template x-if="openModal">
+                            <video :src="currentVideo" class="w-full max-h-[80vh]" controls autoplay loop playsinline></video>
+                        </template>
                     </div>
                 </div>
-            </template>
-        </div>
+            </div>
+        </template>
     </div>
 
     <style>

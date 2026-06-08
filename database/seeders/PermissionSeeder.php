@@ -40,7 +40,8 @@ class PermissionSeeder extends Seeder
             'manage_roles',           // Can create and configure Spatie roles
             'view_system_logs',
             'subscribe_to_packages',   // Can view system errors and logs
-            'view_billing',           // Can access the billing dashboard
+            'view_billing',
+            'view_occasions',           // Can access the billing dashboard
         ];
 
         foreach ($permissions as $permission) {

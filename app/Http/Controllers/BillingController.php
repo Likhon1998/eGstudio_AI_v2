@@ -21,8 +21,12 @@ class BillingController extends Controller
             ->orderBy('is_active_selection', 'desc') // Puts the active one at the top
             ->latest()
             ->get();
-        
-        return view('billing.index', compact('user', 'billings', 'wallets'));
+
+        return view('billing.index', compact(
+            'user',
+            'billings',
+            'wallets'
+        ));
     }
 
     // Handles the user clicking "Set as Active" on a wallet

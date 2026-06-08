@@ -2,61 +2,93 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Logo;
 use App\Models\ProductAsset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class ProductAssetController extends Controller
 {
-    // Shows the gallery and the upload form
-    public function index()
+    public function index(Request $request)
     {
-        $assets = ProductAsset::where('user_id', auth()->id())->latest()->get();
-        return view('assets.index', compact('assets'));
+        $tab = $request->query('tab', ProductAsset::TYPE_PRODUCT);
+        $allowedTabs = [ProductAsset::TYPE_PRODUCT, ProductAsset::TYPE_TEMPLATE, 'logo'];
+        if (! in_array($tab, $allowedTabs, true)) {
+            $tab = ProductAsset::TYPE_PRODUCT;
+        }
+
+        $assets = collect();
+        $logos = collect();
+
+        if ($tab === 'logo') {
+            $logos = Logo::where('user_id', auth()->id())->latest()->get();
+        } else {
+            $assets = ProductAsset::where('user_id', auth()->id())
+                ->where('asset_type', $tab)
+                ->latest()
+                ->get();
+        }
+
+        $missingFileCount = 0;
+        if ($tab === 'logo') {
+            $missingFileCount = $logos->filter(fn ($logo) => ! $logo->fileExistsOnDisk())->count();
+        } else {
+            $missingFileCount = $assets->filter(fn ($asset) => ! $asset->fileExistsOnDisk())->count();
+        }
+
+        return view('assets.index', compact('assets', 'logos', 'tab', 'missingFileCount'));
     }
 
-    // Handles new file uploads
-    // 2. STORE: Handle multiple new uploads
     public function store(Request $request)
     {
-        // Validate that it is an array of files, and each file is a valid image
         $request->validate([
+            'asset_type' => 'required|in:product,template',
             'file_paths' => 'required|array',
             'file_paths.*' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
-        $uploadedCount = 0;
+        $assetType = $request->input('asset_type');
+        $storageFolder = $assetType === ProductAsset::TYPE_TEMPLATE ? 'template_assets' : 'product_assets';
+        $created = [];
 
-        // Loop through every file the user selected
         foreach ($request->file('file_paths') as $file) {
-            
-            // Store the file
-            $path = $file->store('product_assets', 'public');
-            
-            // Auto-extract the name from the file (removes the .jpg/.png extension)
+            $path = $file->store($storageFolder, 'public');
             $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
 
-            // Create the record
-            ProductAsset::create([
+            $created[] = ProductAsset::create([
                 'user_id' => auth()->id(),
-                'name' => $originalName, 
+                'asset_type' => $assetType,
+                'name' => $originalName,
                 'file_path' => $path,
             ]);
-
-            $uploadedCount++;
         }
 
-        return back()->with('success', $uploadedCount . ' asset(s) successfully added to your library!');
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'assets' => collect($created)->map(fn (ProductAsset $asset) => [
+                    'id' => $asset->id,
+                    'name' => $asset->name,
+                    'path' => $asset->file_path,
+                    'url' => $asset->public_url,
+                ])->values(),
+            ]);
+        }
+
+        $label = $assetType === ProductAsset::TYPE_TEMPLATE ? 'template(s)' : 'product asset(s)';
+
+        return redirect()
+            ->route('assets.index', ['tab' => $assetType])
+            ->with('success', count($created) . ' ' . $label . ' successfully added to your library!');
     }
 
-    // Shows the edit form for a specific asset
     public function edit($id)
     {
         $asset = ProductAsset::where('user_id', auth()->id())->findOrFail($id);
+
         return view('assets.edit', compact('asset'));
     }
 
-    // Saves changes (rename or replace the physical image)
     public function update(Request $request, $id)
     {
         $asset = ProductAsset::where('user_id', auth()->id())->findOrFail($id);
@@ -68,27 +100,29 @@ class ProductAssetController extends Controller
 
         $asset->name = $request->name;
 
-        // If they uploaded a new replacement image...
         if ($request->hasFile('file_path')) {
-            // Delete old file from server storage
             Storage::disk('public')->delete($asset->file_path);
-            // Save new file
-            $asset->file_path = $request->file('file_path')->store('product_assets', 'public');
+            $folder = $asset->isTemplate() ? 'template_assets' : 'product_assets';
+            $asset->file_path = $request->file('file_path')->store($folder, 'public');
         }
 
         $asset->save();
 
-        return redirect()->route('assets.index')->with('success', 'Asset updated successfully!');
+        return redirect()
+            ->route('assets.index', ['tab' => $asset->asset_type])
+            ->with('success', 'Asset updated successfully!');
     }
 
-    // Deletes the asset and the physical file
     public function destroy($id)
     {
         $asset = ProductAsset::where('user_id', auth()->id())->findOrFail($id);
-        
+        $tab = $asset->asset_type;
+
         Storage::disk('public')->delete($asset->file_path);
         $asset->delete();
 
-        return back()->with('success', 'Asset deleted permanently.');
+        return redirect()
+            ->route('assets.index', ['tab' => $tab])
+            ->with('success', 'Asset deleted permanently.');
     }
 }

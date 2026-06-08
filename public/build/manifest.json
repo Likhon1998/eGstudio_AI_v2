@@ -1,13 +1,34 @@
 {
+  "node_modules/gifenc/dist/gifenc.esm.js": {
+    "file": "assets/gifenc.esm-BWxMhepS.js",
+    "name": "gifenc.esm",
+    "src": "node_modules/gifenc/dist/gifenc.esm.js",
+    "isDynamicEntry": true
+  },
   "resources/css/app.css": {
-    "file": "assets/app-Dj3PX4fC.css",
+    "file": "assets/app-_kmOBjE3.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-BdKX2mS3.js",
+    "file": "assets/app-D6NZYg2N.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true
+  },
+  "resources/js/dashboard-charts.js": {
+    "file": "assets/dashboard-charts-BJ2gNW_h.js",
+    "name": "dashboard-charts",
+    "src": "resources/js/dashboard-charts.js",
+    "isEntry": true
+  },
+  "resources/js/gallery-download.js": {
+    "file": "assets/gallery-download-DVdGwi3y.js",
+    "name": "gallery-download",
+    "src": "resources/js/gallery-download.js",
+    "isEntry": true,
+    "dynamicImports": [
+      "node_modules/gifenc/dist/gifenc.esm.js"
+    ]
   }
 }

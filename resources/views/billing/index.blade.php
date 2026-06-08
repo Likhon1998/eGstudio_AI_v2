@@ -22,8 +22,8 @@
         {{-- COMMAND CENTER HEADER --}}
         <div class="mb-10 border-b border-white/10 pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
             <div>
-                <h1 class="text-2xl font-black text-white uppercase tracking-widest">My Neural Wallets</h1>
-                <p class="text-[10px] text-gray-500 font-bold uppercase mt-1.5">Manage and switch between your purchased asset packages</p>
+                <h1 class="text-2xl font-black text-white uppercase tracking-widest">My Subscriptions</h1>
+                <p class="text-[10px] text-gray-500 font-bold uppercase mt-1.5">Your plan wallets — credits remaining vs. plan allowance (covers CGI &amp; Occasion Studio)</p>
             </div>
             
             {{-- Action Buttons --}}
@@ -35,7 +35,11 @@
             </div>
         </div>
 
-        {{-- WALLETS GRID --}}
+        {{-- CGI NEURAL WALLETS --}}
+        <h2 class="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+            <span class="w-1 h-4 bg-blue-500 rounded-full"></span>
+            CGI Neural Wallets
+        </h2>
         <div class="space-y-5 mb-12">
             @forelse($wallets as $wallet)
                 @php

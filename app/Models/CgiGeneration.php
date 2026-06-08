@@ -25,7 +25,7 @@ class CgiGeneration extends Model
         'lighting_style',
         'image_prompt', 
         'video_prompt',
-        'audio_prompt',    // Added for audio directives
+        'audio_prompt',   
         'negative_prompt', 
         'status', 
         'image_status', 
@@ -34,7 +34,13 @@ class CgiGeneration extends Model
         'video_url',
         'branded_image_url',
         'branded_video_url',
-        'video_error_message'
+        'footer_image_url',
+        'footer_status',
+        'video_error_message',
+        'merged_image_url',
+        'merge_status',
+        'merged_video_url',
+        'merge_video_status',
     ];
 
     public function user()
@@ -49,4 +55,14 @@ class CgiGeneration extends Model
     {
         return $this->hasMany(CgiSocialPost::class, 'cgi_generation_id');
     }
+
+    /**
+     * Relationship: A generation can have many approval requests
+     * (one per submitted media item / variant).
+     */
+    public function approvals()
+    {
+        return $this->hasMany(MediaApproval::class, 'cgi_generation_id');
+    }
+
 }

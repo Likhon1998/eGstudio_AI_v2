@@ -1,18 +1,12 @@
 <x-app-layout>
+    @push('vite-scripts')
+        @vite(['resources/js/dashboard-charts.js'])
+    @endpush
+
     {{-- Main Container --}}
     <div class="max-w-7xl mx-auto pt-6 pb-12 px-4 sm:px-6 lg:px-8 space-y-8 antialiased selection:bg-blue-500/30">
         
-        {{-- DYNAMIC CALCULATIONS --}}
         @php
-            // Calculate dynamic percentages for the Pipeline Assets
-            $totalImages = $generations->whereNotNull('image_url')->count();
-            $totalVideos = $generations->whereNotNull('video_url')->count();
-            $totalAssets = $totalImages + $totalVideos;
-            
-            $imagePercentage = $totalAssets > 0 ? round(($totalImages / $totalAssets) * 100) : 0;
-            $videoPercentage = $totalAssets > 0 ? round(($totalVideos / $totalAssets) * 100) : 0;
-
-            // Multi-Wallet Active Status Logic
             $user = auth()->user();
             
             // Find the currently active wallet
@@ -189,43 +183,22 @@
             @endif
         @endcan
 
-        {{-- 2. HEADER SECTION --}}
-        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-6 border-b border-white/5">
-            <div class="space-y-2">
-                <div class="flex items-center gap-3">
-                    <div class="relative flex h-3 w-3">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                      <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
-                    </div>
-                    <h1 class="text-2xl font-black tracking-widest text-white uppercase">
-                        Core <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">Operations</span>
-                    </h1>
-                </div>
-                <p class="text-[11px] text-gray-500 font-mono uppercase tracking-widest">
-                    ID: 0x{{ substr(md5(Auth::id()), 0, 8) }} <span class="text-gray-600 px-2">|</span> Node_Primary
+        {{-- 2. HEADER --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+            <div>
+                <h1 class="text-xl font-black text-white tracking-wide">
+                    Welcome, <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">{{ Auth::user()->name }}</span>
+                </h1>
+                <p class="text-[10px] text-gray-500 font-mono uppercase tracking-widest mt-1">
+                    {{ now('Asia/Dhaka')->format('l, M d, Y') }}
+                    <span class="text-gray-700 mx-2">·</span>
+                    <span class="{{ $processingCount > 0 ? 'text-amber-400' : 'text-emerald-400' }}">
+                        {{ $processingCount > 0 ? 'Rendering' : 'System stable' }}
+                    </span>
                 </p>
             </div>
-
-            <div class="flex flex-wrap items-center gap-4 lg:gap-8 bg-[#0a0a0a] p-4 rounded-xl border border-white/5">
-                <div class="flex items-center gap-6">
-                    <div class="text-right">
-                        <span class="block text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1">Total Assets</span>
-                        <span class="text-lg font-mono font-bold text-white">{{ $totalAssets }}</span>
-                    </div>
-                    <div class="w-px h-8 bg-white/10"></div>
-                    <div class="text-left">
-                        <span class="block text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1">System Load</span>
-                        <span class="text-sm font-black uppercase tracking-wider {{ $generations->where('status', 'processing')->count() > 0 ? 'text-amber-400 animate-pulse' : 'text-emerald-400' }}">
-                            {{ $generations->where('status', 'processing')->count() > 0 ? 'Rendering' : 'Stable' }}
-                        </span>
-                    </div>
-                </div>
-                <div class="hidden lg:block w-px h-8 bg-white/10"></div>
-                <div class="bg-black border border-white/10 px-4 py-2 rounded-lg flex items-center justify-center min-w-[100px]">
-                    <span id="live-clock" class="text-sm font-mono font-bold text-blue-400">
-                        {{ now('Asia/Dhaka')->format('h:i:s A') }}
-                    </span>
-                </div>
+            <div class="bg-[#0a0a0a] border border-white/10 px-4 py-2 rounded-lg">
+                <span id="live-clock" class="text-sm font-mono font-bold text-blue-400">{{ now('Asia/Dhaka')->format('h:i:s A') }}</span>
             </div>
         </div>
 
@@ -251,97 +224,210 @@
             </div>
         @endif
 
-        {{-- 5. MAIN DASHBOARD GRID --}}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {{-- Operator Console (Wider) --}}
-            <div class="lg:col-span-2 bg-[#0a0a0a] border border-white/5 rounded-2xl p-6 md:p-8 flex flex-col justify-between relative overflow-hidden group hover:border-blue-500/30 transition-colors">
-                
-                {{-- Decorative background elements --}}
-                <div class="absolute -right-20 -top-20 opacity-10 pointer-events-none">
-                    <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        {{-- 5. TODAY + LIFETIME OVERVIEW --}}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-1 rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-[#0a0a0a] p-6 flex flex-col justify-center">
+                <p class="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-2">Made Today</p>
+                <p class="text-5xl font-black text-white leading-none">{{ $stats['today']['total'] }}</p>
+                <p class="text-[10px] text-gray-500 mt-3 font-mono">
+                    @if($stats['today']['total'] === 0)
+                        No new assets today
+                    @else
+                        Img {{ $stats['today']['cgi_images'] }} · Vid {{ $stats['today']['cgi_videos'] }} · Occasion {{ $stats['today']['occasion'] }}
+                    @endif
+                </p>
+            </div>
+            <div class="md:col-span-2 rounded-2xl border border-white/5 bg-[#0a0a0a] p-6 grid grid-cols-2 sm:grid-cols-4 gap-4 items-center">
+                <div class="text-center">
+                    <p class="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1">Lifetime Total</p>
+                    <p class="text-3xl font-black text-white">{{ $stats['lifetime_total'] }}</p>
                 </div>
+                <div class="text-center">
+                    <p class="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1">CGI Images</p>
+                    <p class="text-3xl font-black text-blue-400">{{ array_sum($stats['cgi']['images']) }}</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1">CGI Videos</p>
+                    <p class="text-3xl font-black text-purple-400">{{ array_sum($stats['cgi']['videos']) }}</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-1">Occasion</p>
+                    <p class="text-3xl font-black text-pink-400">{{ array_sum($stats['occasion']['images']) + $stats['occasion']['posted'] }}</p>
+                </div>
+            </div>
+        </div>
 
-                <div>
-                    <div class="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
-                        <span class="text-[11px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-2">
-                            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                            Console_Status
-                        </span>
-                        <span class="text-[10px] text-blue-400/70 font-mono italic animate-pulse">Awaiting parameters...</span>
-                    </div>
-                    
-                    <div class="space-y-5">
+        {{-- 6. NEURAL ANALYTICS CHARTS --}}
+        <script type="application/json" id="dashboard-chart-data">@json($stats['charts'])</script>
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div class="xl:col-span-2 relative rounded-2xl border border-white/5 bg-[#0a0a0a] p-6 overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-purple-500/5 pointer-events-none"></div>
+                <div class="relative">
+                    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6 pb-4 border-b border-white/5">
                         <div>
-                            <h2 class="text-lg font-black text-white mb-2 tracking-tight">Operator Interface Ready</h2>
-                            <p class="text-sm text-gray-500 leading-relaxed max-w-xl">
-                                Neural generation engine is synchronized and online. All rendering subsystems are reporting nominal performance. You are cleared to input high-fidelity directives.
-                            </p>
+                            <h2 class="text-[11px] font-black text-cyan-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee]"></span>
+                                Neural Output · 14 Days
+                            </h2>
+                            <p class="text-[10px] text-gray-500 mt-1">Your daily production with eGStudio AI</p>
                         </div>
-
-                        <div class="inline-flex items-center gap-3 bg-black border border-white/10 px-4 py-2.5 rounded-lg shadow-inner">
-                            <div class="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></div>
-                            <span class="text-xs font-mono font-bold text-blue-300">{{ Auth::user()->name }}</span>
-                            <span class="text-gray-700">|</span>
-                            <span class="text-[10px] font-black text-gray-500 uppercase tracking-widest">{{ Auth::user()->role }}</span>
-                        </div>
+                        <span class="text-[9px] font-mono text-gray-600 uppercase tracking-widest">Line trend</span>
                     </div>
-                </div>
-
-                <div class="mt-8 pt-6 border-t border-white/5">
-                    <a href="{{ route('cgi.create') }}" class="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black uppercase tracking-widest rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.3)] transition-all">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                        Launch Generation Task
-                    </a>
+                    <div class="h-[280px] sm:h-[320px]">
+                        <canvas id="neural-line-chart"></canvas>
+                    </div>
                 </div>
             </div>
 
-            {{-- Asset Distribution (DYNAMIC PROGRESS BARS) --}}
-            <div class="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6 md:p-8 flex flex-col justify-between group hover:border-white/20 transition-colors">
-                <div>
-                    <span class="text-[11px] text-gray-400 font-black uppercase tracking-widest block mb-6 flex items-center gap-2 pb-4 border-b border-white/5">
-                        <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
-                        Pipeline Assets
-                    </span>
-                    
-                    <div class="space-y-6">
-                        {{-- Images Dynamic Bar --}}
-                        <div>
-                            <div class="flex items-end justify-between mb-2">
-                                <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Images</span>
-                                <div class="text-right">
-                                    <span class="text-lg font-mono font-black text-white leading-none">{{ $totalImages }}</span>
-                                    <span class="text-[9px] font-mono text-blue-400 ml-1">{{ $imagePercentage }}%</span>
-                                </div>
-                            </div>
-                            <div class="w-full bg-black border border-white/10 h-2 rounded-full overflow-hidden p-[1px]">
-                                <div class="bg-gradient-to-r from-blue-600 to-cyan-400 h-full rounded-full transition-all duration-1000 ease-out" style="width: {{ $imagePercentage }}%"></div>
-                            </div>
-                        </div>
-                        
-                        {{-- Videos Dynamic Bar --}}
-                        <div>
-                            <div class="flex items-end justify-between mb-2">
-                                <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Videos</span>
-                                <div class="text-right">
-                                    <span class="text-lg font-mono font-black text-white leading-none">{{ $totalVideos }}</span>
-                                    <span class="text-[9px] font-mono text-pink-400 ml-1">{{ $videoPercentage }}%</span>
-                                </div>
-                            </div>
-                            <div class="w-full bg-black border border-white/10 h-2 rounded-full overflow-hidden p-[1px]">
-                                <div class="bg-gradient-to-r from-pink-600 to-purple-500 h-full rounded-full transition-all duration-1000 ease-out" style="width: {{ $videoPercentage }}%"></div>
-                            </div>
-                        </div>
+            <div class="relative rounded-2xl border border-white/5 bg-[#0a0a0a] p-6 overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-tr from-pink-500/5 via-transparent to-blue-500/5 pointer-events-none"></div>
+                <div class="relative h-full flex flex-col">
+                    <div class="mb-4 pb-4 border-b border-white/5">
+                        <h2 class="text-[11px] font-black text-pink-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-pink-500 shadow-[0_0_10px_#ec4899]"></span>
+                            Asset Mix
+                        </h2>
+                        <p class="text-[10px] text-gray-500 mt-1">Lifetime breakdown by type</p>
                     </div>
-                </div>
-
-                <div class="mt-8 pt-5 border-t border-white/5">
-                    <div class="flex justify-between items-center text-[10px] text-gray-500 font-mono">
-                        <span>Total Output</span>
-                        <span class="text-emerald-400">{{ $totalAssets }} Rendered</span>
+                    <div class="flex-1 min-h-[260px]">
+                        <canvas id="neural-pie-chart"></canvas>
                     </div>
                 </div>
             </div>
+        </div>
+
+        {{-- 7. STUDIO BREAKDOWN --}}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {{-- CGI Studio --}}
+            <div class="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6 space-y-6">
+                <div class="flex items-center justify-between pb-4 border-b border-white/5">
+                    <h2 class="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                        CGI Studio
+                    </h2>
+                </div>
+
+                {{-- Images --}}
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest">Images</p>
+                        <a href="{{ route('cgi.images') }}" class="text-[8px] font-black text-gray-600 hover:text-white uppercase tracking-widest transition-colors">Gallery →</a>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        @foreach([
+                            ['label' => 'Raw', 'total' => $stats['cgi']['images']['raw'], 'today' => $stats['today']['cgi_image_raw'], 'color' => 'text-white', 'border' => 'border-white/5'],
+                            ['label' => 'Branded', 'total' => $stats['cgi']['images']['branded'], 'today' => $stats['today']['cgi_image_branded'], 'color' => 'text-emerald-400', 'border' => 'border-emerald-500/10'],
+                            ['label' => 'Templated', 'total' => $stats['cgi']['images']['templated'], 'today' => $stats['today']['cgi_image_templated'], 'color' => 'text-orange-400', 'border' => 'border-orange-500/10'],
+                        ] as $row)
+                        <div class="bg-black/50 border {{ $row['border'] }} rounded-xl p-3 text-center">
+                            <p class="text-[8px] font-bold text-gray-500 uppercase tracking-widest mb-1">{{ $row['label'] }}</p>
+                            <p class="text-xl font-black {{ $row['color'] }}">{{ $row['total'] }}</p>
+                            <p class="text-[8px] text-gray-600 font-mono mt-1">+{{ $row['today'] }} today</p>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                {{-- Videos --}}
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest">Videos</p>
+                        <a href="{{ route('cgi.videos') }}" class="text-[8px] font-black text-gray-600 hover:text-white uppercase tracking-widest transition-colors">Gallery →</a>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        @foreach([
+                            ['label' => 'Raw', 'total' => $stats['cgi']['videos']['raw'], 'today' => $stats['today']['cgi_video_raw'], 'color' => 'text-white', 'border' => 'border-white/5'],
+                            ['label' => 'Branded', 'total' => $stats['cgi']['videos']['branded'], 'today' => $stats['today']['cgi_video_branded'], 'color' => 'text-pink-400', 'border' => 'border-pink-500/10'],
+                            ['label' => 'Templated', 'total' => $stats['cgi']['videos']['templated'], 'today' => $stats['today']['cgi_video_templated'], 'color' => 'text-purple-400', 'border' => 'border-purple-500/10'],
+                        ] as $row)
+                        <div class="bg-black/50 border {{ $row['border'] }} rounded-xl p-3 text-center">
+                            <p class="text-[8px] font-bold text-gray-500 uppercase tracking-widest mb-1">{{ $row['label'] }}</p>
+                            <p class="text-xl font-black {{ $row['color'] }}">{{ $row['total'] }}</p>
+                            <p class="text-[8px] text-gray-600 font-mono mt-1">+{{ $row['today'] }} today</p>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+
+            {{-- Occasion Studio --}}
+            <div class="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6 space-y-6">
+                <div class="flex items-center justify-between pb-4 border-b border-white/5">
+                    <h2 class="text-[11px] font-black text-pink-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-pink-500"></span>
+                        Occasion Studio
+                    </h2>
+                    <a href="{{ route('occasions.gallery') }}" class="text-[9px] font-black text-gray-500 hover:text-white uppercase tracking-widest transition-colors">Gallery →</a>
+                </div>
+
+                <div>
+                    <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-3">Images</p>
+                    <div class="grid grid-cols-3 gap-3">
+                        @foreach([
+                            ['label' => 'Raw', 'total' => $stats['occasion']['images']['raw'], 'today' => $stats['today']['occasion_image_raw'], 'color' => 'text-white', 'border' => 'border-white/5'],
+                            ['label' => 'Branded', 'total' => $stats['occasion']['images']['branded'], 'today' => $stats['today']['occasion_image_branded'], 'color' => 'text-blue-400', 'border' => 'border-blue-500/10'],
+                            ['label' => 'Merged', 'total' => $stats['occasion']['images']['templated'], 'today' => $stats['today']['occasion_image_templated'], 'color' => 'text-indigo-400', 'border' => 'border-indigo-500/10'],
+                        ] as $row)
+                        <div class="bg-black/50 border {{ $row['border'] }} rounded-xl p-3 text-center">
+                            <p class="text-[8px] font-bold text-gray-500 uppercase tracking-widest mb-1">{{ $row['label'] }}</p>
+                            <p class="text-xl font-black {{ $row['color'] }}">{{ $row['total'] }}</p>
+                            <p class="text-[8px] text-gray-600 font-mono mt-1">+{{ $row['today'] }} today</p>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-3">Social Posts</p>
+                    <div class="grid grid-cols-1 gap-3">
+                        <div class="bg-black/50 border border-rose-500/10 rounded-xl p-4 text-center">
+                            <p class="text-[8px] font-bold text-gray-500 uppercase tracking-widest mb-1">Posted to Social</p>
+                            <p class="text-2xl font-black text-rose-400">{{ $stats['occasion']['posted'] }}</p>
+                            <p class="text-[8px] text-gray-600 font-mono mt-1">+{{ $stats['today']['posted'] }} today</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- 8. QUICK ACTIONS --}}
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <a href="{{ route('cgi.create') }}" class="group flex items-center gap-3 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/20 hover:border-blue-500/40 rounded-xl px-5 py-4 transition-all">
+                <div class="w-9 h-9 rounded-lg bg-blue-600/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </div>
+                <div>
+                    <p class="text-[10px] font-black text-white uppercase tracking-widest">CGI Studio</p>
+                    <p class="text-[8px] text-gray-500 uppercase tracking-wider mt-0.5">New generation</p>
+                </div>
+            </a>
+            <a href="{{ route('occasions.create') }}" class="group flex items-center gap-3 bg-pink-600/10 hover:bg-pink-600/20 border border-pink-500/20 hover:border-pink-500/40 rounded-xl px-5 py-4 transition-all">
+                <div class="w-9 h-9 rounded-lg bg-pink-600/20 flex items-center justify-center text-pink-400 group-hover:scale-110 transition-transform">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                </div>
+                <div>
+                    <p class="text-[10px] font-black text-white uppercase tracking-widest">Occasion</p>
+                    <p class="text-[8px] text-gray-500 uppercase tracking-wider mt-0.5">New campaign</p>
+                </div>
+            </a>
+            <a href="{{ route('cgi.images') }}" class="group flex items-center gap-3 bg-[#0a0a0a] hover:bg-white/5 border border-white/5 hover:border-white/15 rounded-xl px-5 py-4 transition-all">
+                <div class="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 group-hover:scale-110 transition-transform">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
+                <div>
+                    <p class="text-[10px] font-black text-white uppercase tracking-widest">Image Gallery</p>
+                    <p class="text-[8px] text-gray-500 uppercase tracking-wider mt-0.5">View assets</p>
+                </div>
+            </a>
+            <a href="{{ route('cgi.videos') }}" class="group flex items-center gap-3 bg-[#0a0a0a] hover:bg-white/5 border border-white/5 hover:border-white/15 rounded-xl px-5 py-4 transition-all">
+                <div class="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 group-hover:scale-110 transition-transform">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                </div>
+                <div>
+                    <p class="text-[10px] font-black text-white uppercase tracking-widest">Video Gallery</p>
+                    <p class="text-[8px] text-gray-500 uppercase tracking-wider mt-0.5">View renders</p>
+                </div>
+            </a>
         </div>
 
         {{-- 7. FOOTER / BRANDING --}}
