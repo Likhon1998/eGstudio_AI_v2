@@ -309,7 +309,7 @@
                                     isPublishing: false,
                                     captionFromAI: false,
                                     captionLangPickerOpen: false,
-                                    captionLanguages: @js(config('caption_language_options.languages')),
+                                    captionLanguages: @js($captionLanguages ?? []),
 
                                     requiresApproval: {{ $reqAppr ? 'true' : 'false' }},
                                     mergedApprovalStatus: '{{ $mergedMeta['status'] }}',
@@ -719,6 +719,10 @@
                                             $dispatch('notify', { message: 'Select an image to caption first.', type: 'error' });
                                             return;
                                         }
+                                        if (!Array.isArray(this.captionLanguages) || this.captionLanguages.length === 0) {
+                                            $dispatch('notify', { message: 'Caption languages unavailable — refresh or contact support.', type: 'error' });
+                                            return;
+                                        }
                                         this.captionLangPickerOpen = true;
                                     },
 
@@ -1017,7 +1021,8 @@
                                                 {{-- CREATE POST / SOCIAL MODAL --}}
                                                 <div x-show="openModal === 'createPost'"
                                                      x-effect="openModal === 'createPost' && resizePostCaption()"
-                                                     class="relative bg-[#0f0f0f] border border-white/5 w-full max-w-3xl rounded-xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+                                                     class="relative bg-[#0f0f0f] border border-white/5 w-full max-w-3xl rounded-xl shadow-2xl flex flex-col max-h-[90vh]"
+                                                     :class="captionLangPickerOpen ? 'overflow-visible' : 'overflow-hidden'"
                                                      @click.away="captionLangPickerOpen ? (captionLangPickerOpen = false) : closeModal()">
                                                     
                                                     <div class="flex flex-col flex-1 min-h-0 transition-all duration-300"
@@ -1129,67 +1134,61 @@
 
                                                     </div>{{-- end blurred create-post content --}}
 
-                                                    {{-- Language picker: full-modal layer (not clipped by scroll body) --}}
-                                                    <template x-teleport="body">
-                                                        <div x-show="openModal === 'createPost' && captionLangPickerOpen"
-                                                             x-transition:enter="transition ease-out duration-200"
-                                                             x-transition:enter-start="opacity-0"
-                                                             x-transition:enter-end="opacity-100"
-                                                             x-transition:leave="transition ease-in duration-150"
-                                                             x-transition:leave-start="opacity-100"
-                                                             x-transition:leave-end="opacity-0"
-                                                             @click.self="captionLangPickerOpen = false"
-                                                             @keydown.escape.window="captionLangPickerOpen = false"
-                                                             class="fixed inset-0 z-[1001] flex items-center justify-center p-4 sm:p-8 bg-black/60 backdrop-blur-xl"
-                                                             x-cloak>
-                                                            <div class="w-full max-w-md max-h-[min(640px,calc(100vh-3rem))] flex flex-col rounded-2xl border border-pink-500/30 bg-gradient-to-b from-[#16161f] via-[#101016] to-[#0a0a0a] shadow-[0_28px_90px_-16px_rgba(0,0,0,0.85)] overflow-hidden"
-                                                                 x-show="captionLangPickerOpen"
-                                                                 x-transition:enter="transition ease-out duration-200 delay-75"
-                                                                 x-transition:enter-start="opacity-0 scale-95 translate-y-3"
-                                                                 x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                                                                 @click.stop>
-                                                                <div class="px-6 pt-6 pb-5 border-b border-white/[0.06] shrink-0">
-                                                                    <div class="flex items-start justify-between gap-4">
-                                                                        <div class="flex items-center gap-3 min-w-0">
-                                                                            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-pink-500/20 to-indigo-500/20 border border-pink-500/30 flex items-center justify-center shrink-0">
-                                                                                <svg class="w-5 h-5 text-pink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path></svg>
-                                                                            </div>
-                                                                            <div class="min-w-0">
-                                                                                <p class="text-[10px] font-black text-pink-400/90 uppercase tracking-[0.2em]">AI Caption</p>
-                                                                                <h4 class="text-base font-bold text-white tracking-tight mt-0.5">Select post language</h4>
-                                                                                <p class="text-[11px] text-gray-500 mt-1 leading-relaxed">Your caption will be written in the language you choose.</p>
-                                                                            </div>
+                                                    {{-- Language picker overlay (inside modal — avoids nested x-teleport issues on some deploy builds) --}}
+                                                    <div x-show="captionLangPickerOpen"
+                                                         x-transition:enter="transition ease-out duration-200"
+                                                         x-transition:enter-start="opacity-0"
+                                                         x-transition:enter-end="opacity-100"
+                                                         x-transition:leave="transition ease-in duration-150"
+                                                         x-transition:leave-start="opacity-100"
+                                                         x-transition:leave-end="opacity-0"
+                                                         @click.self="captionLangPickerOpen = false"
+                                                         @keydown.escape.window="captionLangPickerOpen = false"
+                                                         class="absolute inset-0 z-[1001] flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-xl"
+                                                         x-cloak>
+                                                        <div class="w-full max-w-md max-h-[min(640px,calc(100vh-3rem))] flex flex-col rounded-2xl border border-pink-500/30 bg-gradient-to-b from-[#16161f] via-[#101016] to-[#0a0a0a] shadow-[0_28px_90px_-16px_rgba(0,0,0,0.85)] overflow-hidden"
+                                                             @click.stop>
+                                                            <div class="px-6 pt-6 pb-5 border-b border-white/[0.06] shrink-0">
+                                                                <div class="flex items-start justify-between gap-4">
+                                                                    <div class="flex items-center gap-3 min-w-0">
+                                                                        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-pink-500/20 to-indigo-500/20 border border-pink-500/30 flex items-center justify-center shrink-0">
+                                                                            <svg class="w-5 h-5 text-pink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path></svg>
                                                                         </div>
-                                                                        <button type="button" @click="captionLangPickerOpen = false"
-                                                                                class="shrink-0 w-8 h-8 rounded-lg border border-white/10 text-gray-500 hover:text-white hover:bg-white/5 flex items-center justify-center transition-colors"
-                                                                                aria-label="Close">
-                                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                                                        </button>
+                                                                        <div class="min-w-0">
+                                                                            <p class="text-[10px] font-black text-pink-400/90 uppercase tracking-[0.2em]">AI Caption</p>
+                                                                            <h4 class="text-base font-bold text-white tracking-tight mt-0.5">Select post language</h4>
+                                                                            <p class="text-[11px] text-gray-500 mt-1 leading-relaxed">Your caption will be written in the language you choose.</p>
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-
-                                                                <div class="p-5 sm:p-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">
-                                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                                                        <template x-for="opt in captionLanguages" :key="opt.value">
-                                                                            <button type="button"
-                                                                                @click="generateAICaption(opt.value)"
-                                                                                class="group flex items-center justify-between gap-3 w-full px-4 py-3.5 rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-pink-500/10 hover:border-pink-500/35 focus:outline-none focus:ring-2 focus:ring-pink-500/30 transition-all text-left">
-                                                                                <span class="text-[13px] font-semibold text-gray-100 group-hover:text-white" x-text="opt.label"></span>
-                                                                                <span class="text-[12px] text-gray-500 group-hover:text-pink-200/90 font-medium" x-text="opt.native || ''"></span>
-                                                                            </button>
-                                                                        </template>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div class="px-6 py-4 border-t border-white/[0.06] bg-black/30 flex justify-end shrink-0">
                                                                     <button type="button" @click="captionLangPickerOpen = false"
-                                                                            class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-gray-300 px-4 py-2 rounded-lg hover:bg-white/5 transition-colors">
-                                                                        Cancel
+                                                                            class="shrink-0 w-8 h-8 rounded-lg border border-white/10 text-gray-500 hover:text-white hover:bg-white/5 flex items-center justify-center transition-colors"
+                                                                            aria-label="Close">
+                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                                                                     </button>
                                                                 </div>
                                                             </div>
+
+                                                            <div class="p-5 sm:p-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">
+                                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                                                    <template x-for="opt in captionLanguages" :key="opt.value">
+                                                                        <button type="button"
+                                                                            @click="generateAICaption(opt.value)"
+                                                                            class="group flex items-center justify-between gap-3 w-full px-4 py-3.5 rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-pink-500/10 hover:border-pink-500/35 focus:outline-none focus:ring-2 focus:ring-pink-500/30 transition-all text-left">
+                                                                            <span class="text-[13px] font-semibold text-gray-100 group-hover:text-white" x-text="opt.label"></span>
+                                                                            <span class="text-[12px] text-gray-500 group-hover:text-pink-200/90 font-medium" x-text="opt.native || ''"></span>
+                                                                        </button>
+                                                                    </template>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="px-6 py-4 border-t border-white/[0.06] bg-black/30 flex justify-end shrink-0">
+                                                                <button type="button" @click="captionLangPickerOpen = false"
+                                                                        class="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-gray-300 px-4 py-2 rounded-lg hover:bg-white/5 transition-colors">
+                                                                    Cancel
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                    </template>
+                                                    </div>
                                                 </div>
 
                                                 {{-- DETAILS VIEW (UPDATED TO SHOW ALL INPUTS) --}}

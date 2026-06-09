@@ -37,8 +37,8 @@
         @endif
 
         {{-- FORM --}}
-        <div class="bg-[#0a0a0a] border border-white/5 rounded-xl shadow-2xl relative overflow-hidden">
-            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-600 to-purple-500"></div>
+        <div class="bg-[#0a0a0a] border border-white/5 rounded-xl shadow-2xl relative">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-600 to-purple-500 rounded-t-xl"></div>
             
             <div class="p-6 md:p-8">
                 <form action="{{ route('occasions.store') }}" method="POST" class="space-y-7" @submit="isSubmitting = true">
@@ -74,12 +74,15 @@
                                 Occasion Identity
                             </label>
                             
-                            <div class="relative">
-                                <button type="button" @click="openOccasion = !openOccasion; openTheme = false; openText = false;" class="text-[9px] font-black uppercase tracking-widest text-pink-400 hover:text-pink-300 bg-pink-500/10 px-3 py-1.5 rounded border border-pink-500/20 transition-all flex items-center gap-1.5">
+                            <div class="relative z-[120]">
+                                <button type="button"
+                                        @click="openOccasion = !openOccasion; openTheme = false; openText = false;"
+                                        class="text-[9px] font-black uppercase tracking-widest text-pink-400 hover:text-pink-300 bg-pink-500/10 px-3 py-1.5 rounded border border-pink-500/20 transition-all flex items-center gap-1.5">
                                     💡 Load <span x-text="currentMonthName"></span> Events
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    <svg class="w-3 h-3 transition-transform" :class="openOccasion ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 </button>
-                                <div x-show="openOccasion" @click.away="openOccasion = false" x-cloak class="absolute right-0 mt-1 w-80 max-w-[min(20rem,90vw)] bg-[#111] border border-white/10 rounded-lg shadow-2xl z-50 overflow-hidden max-h-72 overflow-y-auto custom-scrollbar z-[100]">
+                                <div x-show="openOccasion" @click.away="openOccasion = false" x-cloak
+                                     class="absolute right-0 mt-1 w-[min(20rem,calc(100vw-2rem))] bg-[#111] border border-white/10 rounded-lg shadow-2xl overflow-hidden max-h-72 overflow-y-auto custom-scrollbar">
                                     <template x-for="item in availableOccasions" :key="item">
                                         <button type="button" @click="occasion = item; openOccasion = false;" class="w-full text-left px-4 py-3 text-[10px] text-gray-300 hover:bg-pink-500/20 hover:text-white border-b border-white/5 transition-colors block">
                                             <span x-text="item"></span>
@@ -160,8 +163,7 @@
             </div>
         </div>
         
-        {{-- 🚨 AI AUTO-FILL MODAL (UPDATED WITH COMBINED SEARCH & TYPE SELECTION) 🚨 --}}
-        <template x-teleport="body">
+        {{-- AI AUTO-FILL MODAL (fixed overlay — no x-teleport for deploy compatibility) --}}
             <div x-show="openAutoFillModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md" x-cloak>
                 <div class="bg-[#0f0f0f] border border-white/10 w-full max-w-lg rounded-xl shadow-2xl relative" @click.away="!isAutoFilling ? openAutoFillModal = false : null">
                     
@@ -211,7 +213,6 @@
                     </div>
                 </div>
             </div>
-        </template>
 
     </div>
 
@@ -219,7 +220,8 @@
          ALPINE.JS DATA SCRIPT (THE ROBUST BRAIN)
          ======================================================= --}}
     <script>
-        document.addEventListener('alpine:init', () => {
+        (function () {
+            const registerOccasionStudio = () => {
             Alpine.data('occasionStudio', () => ({
                 
                 month: @js(old('target_month', date('n'))),
@@ -246,8 +248,8 @@
                     9: 'September', 10: 'October', 11: 'November', 12: 'December'
                 },
 
-                masterFestivals: @js(config('occasion_presets.masterFestivals')),
-                occasionsMap: @js(config('occasion_presets.occasionsMap')),
+                masterFestivals: @js($masterFestivals ?? []),
+                occasionsMap: @js($occasionsMap ?? []),
 
                 themesMap: {
                     /* ================= JANUARY ================= */
@@ -496,8 +498,13 @@
                 posterVisualHints: @js(config('occasion_presets.posterVisualHints')),
                 textsMap: @js(config('occasion_presets.textsMap')),
 
-                get currentMonthName() { return this.monthsMap[parseInt(this.month)] || ''; },
-                get availableOccasions() { return this.occasionsMap[parseInt(this.month)] || []; },
+                get currentMonthName() { return this.monthsMap[parseInt(this.month, 10)] || ''; },
+                get availableOccasions() {
+                    const key = parseInt(this.month, 10);
+                    const list = this.occasionsMap?.[key] ?? this.occasionsMap?.[String(key)];
+                    return Array.isArray(list) ? list : [];
+                },
+
                 get availableThemes() { return this.themesMap[this.occasion] || this.themesMap['Default Custom Event']; },
                 get availableTexts() { return this.textsMap[this.occasion] || this.textsMap['Default Custom Event']; },
 
@@ -791,7 +798,10 @@
                     }
                 }
             }));
-        });
+            };
+
+            document.addEventListener('alpine:init', registerOccasionStudio);
+        })();
     </script>
 
     <style>

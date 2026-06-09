@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use App\Models\CgiSocialPost;
 use App\Models\Logo;
+use App\Support\CaptionLanguageOptions;
 use App\Support\GalleryAssetPaginator;
 
 /**
@@ -75,8 +76,10 @@ class CgiGenerationController extends Controller
             ? ApprovalController::emptyStudioApprovalHistory()
             : ApprovalController::studioApprovalHistory('cgi', (int) $user->id);
 
+        $captionLanguages = CaptionLanguageOptions::all();
+
         return view('cgi.index', compact(
-            'generations', 'templateAssets', 'userLogos', 'approvalMap', 'requiresApproval', 'approvalHistory'
+            'generations', 'templateAssets', 'userLogos', 'approvalMap', 'requiresApproval', 'approvalHistory', 'captionLanguages'
         ));
     }
 

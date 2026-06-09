@@ -12,7 +12,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Support\CaptionLanguageOptions;
 use App\Support\GalleryAssetPaginator;
+use App\Support\OccasionCalendarPresets;
 use App\Support\PublicMediaUrl;
 
 class OccasionController extends Controller
@@ -739,10 +741,12 @@ class OccasionController extends Controller
             'failed'    => $socialPosts->whereIn('status', ['failed', 'n8n_rejected'])->count(),
         ];
 
+        $captionLanguages = CaptionLanguageOptions::all();
+
         return view('occasions.index', compact(
             'occasions', 'wallet', 'walletAllowances', 'hasPending', 'templateAssets',
             'approvalMap', 'requiresApproval', 'approvalHistory',
-            'socialPosts', 'postHistoryStats'
+            'socialPosts', 'postHistoryStats', 'captionLanguages'
         ));
     }
 
@@ -768,7 +772,13 @@ class OccasionController extends Controller
             }
         }
 
-        return view('occasions.create', compact('wallet'));
+        $calendarPresets = OccasionCalendarPresets::maps();
+
+        return view('occasions.create', [
+            'wallet'          => $wallet,
+            'occasionsMap'    => $calendarPresets['occasionsMap'],
+            'masterFestivals' => $calendarPresets['masterFestivals'],
+        ]);
     }
 
     // =======================================================
