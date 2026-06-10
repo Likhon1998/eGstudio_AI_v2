@@ -59,6 +59,50 @@ export function galleryDownloadState() {
             return encodeCanvasToBlob(canvas, format);
         },
 
+        resolveDownloadEndpoint() {
+            const meta = document.querySelector('meta[name="gallery-download-endpoint"]');
+            return meta?.content || '/gallery/download-image';
+        },
+
+        resolveCsrfToken() {
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            return meta?.content || '';
+        },
+
+        async downloadViaServer(format) {
+            const response = await fetch(this.resolveDownloadEndpoint(), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/octet-stream',
+                    'X-CSRF-TOKEN': this.resolveCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    url: this.downloadImageUrl,
+                    format,
+                    filename: this.downloadBaseName,
+                }),
+            });
+
+            if (!response.ok) {
+                let message = 'Server download failed.';
+                try {
+                    const data = await response.json();
+                    message = data.message || message;
+                } catch {
+                    // Binary or empty error body
+                }
+                throw new Error(message);
+            }
+
+            const ext = format === 'jpg' || format === 'jpeg' ? 'jpg' : format;
+            const filename = this.safeFilename(this.downloadBaseName, ext);
+            const blob = await response.blob();
+            this.triggerBlobDownload(blob, filename);
+        },
+
         async downloadInFormat(format) {
             if (!this.downloadImageUrl || this.isDownloading) {
                 return;
@@ -75,8 +119,14 @@ export function galleryDownloadState() {
                     throw new Error('Unknown download format.');
                 }
 
-                const blob = await this.convertInBrowser(this.downloadImageUrl, format);
-                this.triggerBlobDownload(blob, filename);
+                try {
+                    const blob = await this.convertInBrowser(this.downloadImageUrl, format);
+                    this.triggerBlobDownload(blob, filename);
+                } catch (browserErr) {
+                    console.warn('Browser conversion failed, using server fallback', browserErr);
+                    await this.downloadViaServer(format);
+                }
+
                 this.downloadPickerOpen = false;
                 this.galleryNotify('Download started', 'success');
             } catch (err) {

@@ -8,7 +8,6 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/js/app.js',
                 'resources/js/dashboard-charts.js',
-                'resources/js/gallery-download.js',
             ],
             refresh: true,
         }),

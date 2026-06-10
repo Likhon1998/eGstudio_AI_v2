@@ -20,7 +20,13 @@ class GalleryDownloadController extends Controller
         ]);
 
         $url = trim($request->url);
-        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+        if ($url === '') {
+            return response()->json(['success' => false, 'message' => 'Invalid image URL.'], 422);
+        }
+
+        if (str_starts_with($url, '/')) {
+            $url = url($url);
+        } elseif (!filter_var($url, FILTER_VALIDATE_URL)) {
             return response()->json(['success' => false, 'message' => 'Invalid image URL.'], 422);
         }
 
@@ -57,18 +63,22 @@ class GalleryDownloadController extends Controller
 
     private function isAllowedImageUrl(string $url, Request $request): bool
     {
+        if (str_starts_with($url, '/')) {
+            return true;
+        }
+
         $host = strtolower(parse_url($url, PHP_URL_HOST) ?? '');
         if ($host === '') {
             return false;
         }
 
-        $requestHost = strtolower($request->getHost());
-        if ($requestHost !== '' && $host === $requestHost) {
-            return true;
-        }
+        $allowedHosts = array_filter(array_unique([
+            $this->normalizeHost($request->getHost()),
+            $this->normalizeHost(parse_url(config('app.url'), PHP_URL_HOST) ?? ''),
+            $this->normalizeHost(parse_url(url('/'), PHP_URL_HOST) ?? ''),
+        ]));
 
-        $appHost = strtolower(parse_url(config('app.url'), PHP_URL_HOST) ?? '');
-        if ($appHost !== '' && $host === $appHost) {
+        if (in_array($this->normalizeHost($host), $allowedHosts, true)) {
             return true;
         }
 
@@ -83,12 +93,28 @@ class GalleryDownloadController extends Controller
         return false;
     }
 
+    private function normalizeHost(string $host): string
+    {
+        $host = strtolower(trim($host));
+
+        return str_starts_with($host, 'www.') ? substr($host, 4) : $host;
+    }
+
     private function fetchImageBinary(string $url): string
     {
+        if (str_starts_with($url, '/')) {
+            $url = url($url);
+        }
+
         $path = parse_url($url, PHP_URL_PATH) ?? '';
 
-        if (preg_match('#/storage/(.+)$#i', $path, $matches)) {
-            $relative = urldecode($matches[1]);
+        foreach (['/storage/', '/media/'] as $prefix) {
+            $pos = stripos($path, $prefix);
+            if ($pos === false) {
+                continue;
+            }
+
+            $relative = urldecode(ltrim(substr($path, $pos + strlen($prefix)), '/'));
             if ($relative !== '' && Storage::disk('public')->exists($relative)) {
                 return Storage::disk('public')->get($relative);
             }

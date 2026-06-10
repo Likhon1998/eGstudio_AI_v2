@@ -1,8 +1,4 @@
 <x-app-layout>
-    @push('vite-scripts')
-        @vite(['resources/js/gallery-download.js'])
-    @endpush
-
     {{-- Global Notification System --}}
     <div x-data="{ 
             notifications: [], 
