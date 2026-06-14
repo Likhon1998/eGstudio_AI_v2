@@ -46,10 +46,18 @@
                 <a href="{{ route('occasions.index') }}" class="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-lg text-[10px] font-black uppercase tracking-[0.15em] transition-all border border-white/10">
                     Back to Studio
                 </a>
-                <a href="{{ route('occasions.create') }}" class="flex items-center gap-2 px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white text-[9px] font-black rounded-md transition-all uppercase tracking-widest shadow-lg shadow-pink-600/20">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
-                    New Campaign
-                </a>
+                @if(!empty($canStartPipeline))
+                    <a href="{{ route('occasions.create') }}" class="flex items-center gap-2 px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white text-[9px] font-black rounded-md transition-all uppercase tracking-widest shadow-lg shadow-pink-600/20">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
+                        New Campaign
+                    </a>
+                @else
+                    <span class="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-gray-500 text-[9px] font-black rounded-md uppercase tracking-widest cursor-not-allowed opacity-60"
+                        title="{{ $pipelineBlockMessage ?? 'Insufficient Prompt Credits.' }}">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
+                        New Campaign
+                    </span>
+                @endif
             </div>
         </div>
 

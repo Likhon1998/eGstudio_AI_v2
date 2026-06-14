@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\CgiSocialPost;
 use App\Models\Logo;
 use App\Support\CaptionLanguageOptions;
+use App\Support\CgiBusinessPresets;
 use App\Support\GalleryAssetPaginator;
 
 /**
@@ -98,7 +99,10 @@ class CgiGenerationController extends Controller
             ->latest()
             ->get();
 
-        return view('cgi.create', compact('productAssets'));
+        return view('cgi.create', [
+            'productAssets' => $productAssets,
+            'businessPresets' => CgiBusinessPresets::all(),
+        ]);
     }
 
     /**
@@ -142,6 +146,7 @@ class CgiGenerationController extends Controller
         // ---------------------------------------------------------
         // Using manual Validator to intercept and return beautiful frontend Toast errors.
         $validator = Validator::make($request->all(), [
+            'business_type'    => 'required|string|in:' . implode(',', CgiBusinessPresets::keys()),
             'product_name'     => 'required|string|max:255',
             'product_image'    => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'marketing_angle'  => 'required|string|max:255',
@@ -219,6 +224,7 @@ class CgiGenerationController extends Controller
             'id'               => $recordId,
             'user_id'          => Auth::id(),
             'product_name'     => $request->product_name,
+            'business_type'    => $request->business_type,
             'product_image'    => $imagePath,
             'marketing_angle'  => $request->marketing_angle,
             'visual_prop'      => $request->visual_prop,
@@ -244,6 +250,7 @@ class CgiGenerationController extends Controller
                 ->post($webhookUrl, [
                     'id'               => $recordId,
                     'product_name'     => $request->product_name,
+                    'business_type'    => $request->business_type,
                     'marketing_angle'  => $request->marketing_angle,
                     'visual_prop'      => $request->visual_prop,
                     'atmosphere'       => $request->atmosphere,
@@ -352,7 +359,7 @@ class CgiGenerationController extends Controller
             // apply to the final render without polluting the user-editable prompt.
             $response = Http::withoutVerifying()->timeout(120)->asJson()->post($webhookUrl, [
                 'id' => $generation->id,
-                'image_prompt' => $this->applyBrandDirectives($generation->image_prompt),
+                'image_prompt' => $this->applyBrandDirectives($generation->image_prompt, $generation->business_type),
                 'negative_prompt' => $generation->negative_prompt,
                 'product_image' => $publicImageUrl
             ]);
@@ -1417,20 +1424,11 @@ class CgiGenerationController extends Controller
      *  - Clean, darker negative space up top reserved for a marketing headline.
      *  - Requested marketing text rendered as a clean headline, not crowded bullets.
      */
-    private function applyBrandDirectives(?string $imagePrompt): string
+    private function applyBrandDirectives(?string $imagePrompt, ?string $businessType = 'lighting'): string
     {
         $imagePrompt = trim((string) $imagePrompt);
-
-        $directives = implode(' ', [
-            'MANDATORY BRAND DIRECTIVES (must always be applied):',
-            'Produce a clean, photorealistic advertising poster set in a real-life environment (e.g. home, patio, kitchen, washroom, office or commercial space).',
-            'CRITICAL: the same type of lighting product must appear installed and switched ON inside the scene, fitted exactly as it would be in real life (e.g. tube lights mounted on the ceiling, bulbs sitting in pendant or wall fixtures, panel lights recessed in the ceiling, string lights strung across the space), clearly glowing and visibly lighting up the environment so the poster demonstrates the product actually in use.',
-            'That installed product is the primary light source: the whole scene must be illuminated naturally and warmly by its own glow, with believable light spill, soft reflections, gentle shadows and a cozy, inviting atmosphere.',
-            'Then ALSO showcase the actual product as a highlighted hero element, composited cleanly in the bottom-right corner, softly glowing, in sharp focus, sized so it is clearly visible without dominating the scene, while staying clear of the bottom safe strip.',
-            'LAYOUT SAFE ZONES (CRITICAL): gently dim and darken a soft, smooth horizontal band across the very TOP of the frame (spanning both top corners) and across the very BOTTOM of the frame, like a subtle dark gradient scrim. Keep these bands muted, low-contrast and free of bright light fixtures, strong highlights or busy detail, so overlaid brand logos (top) and footer text (bottom) stay clearly visible and easy to read. Do NOT place any bright lights or product fixtures inside these top and bottom bands.',
-            'Place the marketing headline in the upper-middle area just below the top logo strip, as darker uncluttered negative space.',
-            'Render any requested marketing text / selling points as a short, bold, professional headline that is crisp, correctly spelled, well-spaced and non-overlapping; do NOT crowd the image with many bullet points.',
-        ]);
+        $businessType = CgiBusinessPresets::isValid((string) $businessType) ? (string) $businessType : 'lighting';
+        $directives = CgiBusinessPresets::brandDirectives($businessType);
 
         return $imagePrompt === ''
             ? $directives
@@ -1449,6 +1447,7 @@ class CgiGenerationController extends Controller
         $request->validate([
             'product_image'       => 'nullable|image|max:5120',
             'selected_asset_path' => 'nullable|string',
+            'business_type'       => 'nullable|string|in:' . implode(',', CgiBusinessPresets::keys()),
         ]);
 
         $webhookUrl = 'https://n8n.egeneration.co/webhook/autofill_cgi_studio';
@@ -1484,7 +1483,8 @@ class CgiGenerationController extends Controller
             // Send physical file as multipart/form-data with 'image' key
             $response = $client->attach('image', $fileContents, $fileName)
                 ->post($webhookUrl, [
-                    'executionMode' => 'production'
+                    'executionMode' => 'production',
+                    'business_type' => $request->input('business_type', 'lighting'),
                 ]);
 
             if ($response->successful()) {

@@ -642,19 +642,29 @@ class OccasionController extends Controller
         }
     }
 
-    private function assertPromptCreditsAvailable(): ?string
+    private function promptPipelineBlockMessage(): ?string
     {
         $wallet = $this->getWallet();
 
         if (! $wallet) {
-            return 'No active subscription wallet found.';
+            return 'No active subscription wallet found. Please activate or purchase a plan.';
         }
 
-        if (! isset($wallet->is_admin) && $wallet->prompt_credits <= 0) {
-            return 'Insufficient Prompt Credits. Please upgrade your plan.';
+        if (! isset($wallet->is_admin) && ($wallet->prompt_credits ?? 0) <= 0) {
+            return 'Insufficient Prompt Credits. Please upgrade your plan or refill credits.';
         }
 
         return null;
+    }
+
+    private function canStartPromptPipeline(): bool
+    {
+        return $this->promptPipelineBlockMessage() === null;
+    }
+
+    private function assertPromptCreditsAvailable(): ?string
+    {
+        return $this->promptPipelineBlockMessage();
     }
 
     public function index()
@@ -743,10 +753,15 @@ class OccasionController extends Controller
 
         $captionLanguages = CaptionLanguageOptions::all();
 
+        $canStartPipeline = $this->canStartPromptPipeline();
+        $pipelineBlockMessage = $this->promptPipelineBlockMessage() ?? 'You cannot start the masterpiece pipeline right now.';
+        $hasPromptCredits = $canStartPipeline;
+
         return view('occasions.index', compact(
             'occasions', 'wallet', 'walletAllowances', 'hasPending', 'templateAssets',
             'approvalMap', 'requiresApproval', 'approvalHistory',
-            'socialPosts', 'postHistoryStats', 'captionLanguages'
+            'socialPosts', 'postHistoryStats', 'captionLanguages',
+            'canStartPipeline', 'pipelineBlockMessage', 'hasPromptCredits'
         ));
     }
 
@@ -775,9 +790,11 @@ class OccasionController extends Controller
         $calendarPresets = OccasionCalendarPresets::maps();
 
         return view('occasions.create', [
-            'wallet'          => $wallet,
-            'occasionsMap'    => $calendarPresets['occasionsMap'],
-            'masterFestivals' => $calendarPresets['masterFestivals'],
+            'wallet'                 => $wallet,
+            'occasionsMap'           => $calendarPresets['occasionsMap'],
+            'masterFestivals'        => $calendarPresets['masterFestivals'],
+            'canStartPipeline'       => $this->canStartPromptPipeline(),
+            'pipelineBlockMessage'   => $this->promptPipelineBlockMessage() ?? 'You cannot start the masterpiece pipeline right now.',
         ]);
     }
 
@@ -1162,7 +1179,13 @@ class OccasionController extends Controller
 
         $assets = GalleryAssetPaginator::paginateOccasionMedia($query->latest(), $tab);
 
-        return view('occasions.gallery', compact('assets', 'wallet', 'tab'));
+        return view('occasions.gallery', [
+            'assets'               => $assets,
+            'wallet'               => $wallet,
+            'tab'                  => $tab,
+            'canStartPipeline'     => $this->canStartPromptPipeline(),
+            'pipelineBlockMessage' => $this->promptPipelineBlockMessage() ?? 'You cannot start the masterpiece pipeline right now.',
+        ]);
     }
 
     // =======================================================

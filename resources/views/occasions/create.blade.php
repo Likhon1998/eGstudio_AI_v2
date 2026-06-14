@@ -36,12 +36,22 @@
             </div>
         @endif
 
+        @if(empty($canStartPipeline))
+            <div class="px-5 py-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[10px] font-black uppercase tracking-widest rounded-lg">
+                {{ $pipelineBlockMessage ?? 'Insufficient Prompt Credits. The masterpiece pipeline is unavailable until you refill credits or activate a plan.' }}
+                @can('view_billing')
+                    <a href="{{ route('billing.index') }}" class="block mt-2 text-pink-400 hover:text-pink-300 normal-case tracking-normal font-bold underline">View subscription &amp; refill credits →</a>
+                @endcan
+            </div>
+        @endif
+
         {{-- FORM --}}
         <div class="bg-[#0a0a0a] border border-white/5 rounded-xl shadow-2xl relative">
             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-600 to-purple-500 rounded-t-xl"></div>
             
             <div class="p-6 md:p-8">
-                <form action="{{ route('occasions.store') }}" method="POST" class="space-y-7" @submit="isSubmitting = true">
+                <form action="{{ route('occasions.store') }}" method="POST" class="space-y-7"
+                    @submit="if (!canStartPipeline) { $event.preventDefault(); return; } isSubmitting = true">
                     @csrf
                     
                     {{-- MASTER PAYLOAD: Forces the Negative Space Protocol --}}
@@ -146,16 +156,20 @@
 
                     {{-- SUBMIT BUTTON --}}
                     <div class="pt-4 border-t border-white/5">
-                        <button type="submit" :disabled="isSubmitting" class="w-full py-4 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 disabled:opacity-60 disabled:cursor-wait text-white text-xs font-black rounded-lg uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(236,72,153,0.3)] transition-all">
-                            <span x-show="!isSubmitting">Generate Masterpiece Pipeline</span>
+                        <button type="submit" :disabled="isSubmitting || !canStartPipeline"
+                            class="w-full py-4 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-black rounded-lg uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(236,72,153,0.3)] transition-all">
+                            <span x-show="!isSubmitting && canStartPipeline">Generate Masterpiece Pipeline</span>
+                            <span x-show="!isSubmitting && !canStartPipeline" x-cloak>No Prompt Credits</span>
                             <span x-show="isSubmitting" x-cloak>Starting pipeline…</span>
                         </button>
                         
                         <p class="text-center text-[9px] text-gray-500 uppercase tracking-widest font-bold mt-3">
                             @if(isset($wallet->is_admin) && $wallet->is_admin)
                                 <span class="text-emerald-400">Admin Mode Active: Consumes 0 Credits</span>
-                            @else
+                            @elseif(!empty($canStartPipeline))
                                 Consumes 1 Prompt Credit
+                            @else
+                                <span class="text-amber-400">Masterpiece pipeline unavailable — 0 prompt credits</span>
                             @endif
                         </p>
                     </div>
@@ -241,6 +255,8 @@
                 isSubmitting: false,
                 autoFillError: '',
                 dropdownOpen: false,
+                canStartPipeline: @js($canStartPipeline ?? false),
+                pipelineBlockMessage: @js($pipelineBlockMessage ?? ''),
 
                 monthsMap: {
                     1: 'January', 2: 'February', 3: 'March', 4: 'April', 

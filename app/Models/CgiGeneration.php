@@ -15,7 +15,8 @@ class CgiGeneration extends Model
     protected $fillable = [
         'id', 
         'user_id', 
-        'product_name', 
+        'product_name',
+        'business_type',
         'product_image',
         'marketing_angle', 
         'visual_prop', 
