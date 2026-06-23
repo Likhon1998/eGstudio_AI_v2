@@ -35,6 +35,14 @@ Route::get('/dashboard', DashboardController::class)
 
 Route::middleware('auth')->group(function () {
     
+    // Keeps Laravel session + CSRF token fresh for long-running studio forms
+    Route::get('/session/keep-alive', function () {
+        return response()->json([
+            'ok'         => true,
+            'csrf_token' => csrf_token(),
+        ]);
+    })->name('session.keep-alive');
+
     // User Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

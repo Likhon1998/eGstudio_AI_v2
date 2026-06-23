@@ -52,12 +52,15 @@ class CgiGenerationController extends Controller
         $isAdmin = $user->isAdmin();
 
         // 2. Intelligent Data Scoping: Admins get global view, Users get scoped view.
+        $perPage = 10;
+
         if ($isAdmin) {
-            $generations = CgiGeneration::latest()->get();
+            $generations = CgiGeneration::latest()->paginate($perPage)->withQueryString();
         } else {
             $generations = CgiGeneration::where('user_id', Auth::id())
                 ->latest()
-                ->get();
+                ->paginate($perPage)
+                ->withQueryString();
         }
 
         $templateAssets = ProductAsset::where('user_id', auth()->id())

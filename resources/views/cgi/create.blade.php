@@ -53,7 +53,7 @@
             businessOpen: false,
 
             businessMeta() {
-                return window.cgiBusinessPresets?.[this.business] || { label: 'Lighting Company', icon: '💡' };
+                return window.cgiBusinessPresets?.[this.business] || { label: 'Lumina Elite', tagline: 'Premium Lighting Studio', icon: '💡' };
             },
 
             setBusiness(key) {
@@ -245,12 +245,16 @@
                 {{-- Business Type Selector (beside Directory, no step number) --}}
                 <div class="relative flex-1 sm:flex-none">
                     <button type="button" @click="businessOpen = !businessOpen"
-                        class="w-full sm:w-auto min-w-[168px] px-4 py-2 bg-gray-800/80 border border-gray-700 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-all duration-200 font-semibold text-xs shadow-lg backdrop-blur-sm flex items-center justify-between gap-2">
-                        <span class="flex items-center gap-1.5 truncate">
-                            <span x-text="businessMeta().icon"></span>
-                            <span x-text="businessMeta().label" class="truncate"></span>
+                        class="group w-full sm:w-auto min-w-[168px] px-4 py-2 bg-gray-800/80 border border-gray-700 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-all duration-200 font-semibold text-xs shadow-lg backdrop-blur-sm flex items-center justify-between gap-2">
+                        <span class="flex items-center gap-1.5 min-w-0 text-left leading-tight">
+                            <span x-text="businessMeta().icon" class="shrink-0"></span>
+                            <span class="min-w-0">
+                                <span x-text="businessMeta().label" class="block truncate"></span>
+                                <span x-show="businessMeta().tagline" x-text="businessMeta().tagline"
+                                    class="block truncate text-[8px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-gray-400"></span>
+                            </span>
                         </span>
-                        <svg class="w-3 h-3 text-gray-500 shrink-0 transition-transform" :class="businessOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-3 h-3 text-gray-500 shrink-0 transition-transform group-hover:text-gray-300" :class="businessOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
                     </button>
@@ -261,7 +265,12 @@
                                 :class="business === '{{ $businessKey }}' ? 'bg-blue-600/20 text-white' : 'text-gray-300 hover:bg-gray-800'"
                                 class="w-full flex items-center gap-2 px-4 py-2.5 text-left text-xs font-semibold transition-colors">
                                 <span>{{ $businessPreset['icon'] }}</span>
-                                <span>{{ $businessPreset['label'] }}</span>
+                                <span class="min-w-0">
+                                    <span class="block truncate">{{ $businessPreset['label'] }}</span>
+                                    @if(!empty($businessPreset['tagline']))
+                                        <span class="block truncate text-[8px] font-bold text-gray-500 uppercase tracking-widest">{{ $businessPreset['tagline'] }}</span>
+                                    @endif
+                                </span>
                             </button>
                         @endforeach
                     </div>
@@ -300,6 +309,20 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
 
+                    {{-- Business-specific guidance banner (lighting etc.) --}}
+                    <div class="md:col-span-2" x-data="{
+                        business: localStorage.getItem('cgi_business') || 'lighting',
+                        get preset() { return window.cgiBusinessPresets?.[this.business] || {}; }
+                    }"
+                    x-init="$nextTick(() => { const b = document.getElementById('cgi_business_type')?.value; if (b) business = b; })"
+                    @cgi-business-changed.window="business = $event.detail.business">
+                        <div x-show="preset.form_banner" x-cloak
+                             class="px-4 py-3 rounded-xl border border-blue-500/20 bg-blue-600/10 text-[10px] text-blue-100/90 leading-relaxed">
+                            <span class="font-black uppercase tracking-widest text-blue-400 block mb-1">Director tip</span>
+                            <span x-text="preset.form_banner"></span>
+                        </div>
+                    </div>
+
                     {{-- 01. The Product (LEFT SIDE) --}}
                     <div x-data="{
                         business: localStorage.getItem('cgi_business') || 'lighting',
@@ -309,6 +332,25 @@
                         },
                         get suggestions() {
                             return this.preset.product_suggestions || [];
+                        },
+                        get suggestionGroups() {
+                            const items = this.suggestions;
+                            if (!items.length || !items[0].category) {
+                                return [{ key: 'all', label: null, items }];
+                            }
+                            const cats = this.preset.usage_categories || {};
+                            const groups = {};
+                            for (const item of items) {
+                                const key = item.category || 'other';
+                                if (!groups[key]) groups[key] = [];
+                                groups[key].push(item);
+                            }
+                            const order = Object.keys(cats).length ? Object.keys(cats) : Object.keys(groups);
+                            return order.filter(k => groups[k]?.length).map(key => ({
+                                key,
+                                label: cats[key]?.icon ? cats[key].icon + ' ' + cats[key].label : key,
+                                items: groups[key],
+                            }));
                         }
                     }"
                     x-init="$nextTick(() => { const b = document.getElementById('cgi_business_type')?.value; if (b) business = b; })"
@@ -329,18 +371,29 @@
                                 <span x-text="preset.step01_guide || 'Mention the specific product name. Adding the material helps the AI create realistic textures.'"></span>
                             </div>
                         </div>
-                        <input type="text" name="product_name" x-model="val"
-                            :placeholder="preset.step01_placeholder || 'E.g. Product name...'"
+                        <x-cgi-text-field
+                            name="product_name"
+                            model="val"
                             required
-                            class="w-full bg-black/40 border border-gray-700/80 rounded-xl text-white focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500 p-2.5 outline-none transition-all text-sm shadow-inner placeholder-gray-600">
+                            x-bind:placeholder="preset.step01_placeholder || 'E.g. Product name...'"
+                        />
 
-                        <div class="flex gap-1.5 mt-2.5 overflow-x-auto pb-2 custom-scrollbar snap-x">
-                            <template x-for="item in suggestions" :key="item.value">
-                                <button type="button" @click="val = item.value"
-                                    class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">
-                                    <span x-text="item.icon"></span>
-                                    <span x-text="' ' + item.label"></span>
-                                </button>
+                        <p x-show="preset.step01_example" x-cloak class="mt-1.5 text-[9px] text-gray-500 italic leading-relaxed" x-text="preset.step01_example"></p>
+
+                        <div class="mt-2.5 space-y-2">
+                            <template x-for="group in suggestionGroups" :key="group.key">
+                                <div>
+                                    <p x-show="group.label" class="text-[8px] font-black uppercase tracking-[0.2em] text-gray-500 mb-1.5" x-text="group.label"></p>
+                                    <div class="flex gap-1.5 overflow-x-auto pb-1 custom-scrollbar snap-x">
+                                        <template x-for="item in group.items" :key="item.value">
+                                            <button type="button" @click="val = item.value"
+                                                class="shrink-0 px-2.5 py-1 bg-gray-800/40 border border-gray-700 rounded-md text-[9px] text-gray-400 hover:text-white hover:bg-blue-600/30 transition-all font-bold tracking-wider">
+                                                <span x-text="item.icon"></span>
+                                                <span x-text="' ' + item.label"></span>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
                             </template>
                         </div>
                     </div>
@@ -458,6 +511,23 @@
                             </button>
                         </div>
 
+                        {{-- Product reference preview --}}
+                        <div x-show="imageUrl" x-cloak x-transition.opacity
+                             class="mt-2.5 rounded-xl border border-white/10 bg-black/50 overflow-hidden shadow-inner">
+                            <div class="px-2.5 py-1.5 border-b border-white/5 flex items-center justify-between gap-2 bg-white/[0.03]">
+                                <span class="text-[8px] font-black uppercase tracking-widest text-blue-400/80 shrink-0">Preview</span>
+                                <span class="text-[9px] font-bold text-gray-400 truncate" x-text="selectedAssetName"></span>
+                            </div>
+                            <button type="button" @click="showUploadModal = true"
+                                class="w-full p-3 flex items-center justify-center min-h-[100px] max-h-[168px] bg-[#0a0a0a] hover:bg-[#111] transition-colors group/preview">
+                                <img :src="imageUrl" alt="Product reference preview"
+                                     class="max-h-[152px] max-w-full object-contain rounded-lg shadow-lg border border-white/5 group-hover/preview:scale-[1.02] transition-transform">
+                            </button>
+                            <p class="px-2.5 py-1.5 text-[8px] text-gray-600 text-center uppercase tracking-widest font-bold border-t border-white/5">
+                                Click preview to change image
+                            </p>
+                        </div>
+
                         {{-- CRITICAL FIX: The File Input must stay outside the x-teleport so it submits with the form --}}
                         <input type="file" name="product_image" id="product_image" accept="image/*" class="hidden" @change="handleFileUpload">
 
@@ -529,6 +599,25 @@
                         get chips() {
                             return this.preset.marketing_chips || [];
                         },
+                        get chipGroups() {
+                            const items = this.chips;
+                            if (!items.length || !items[0].category) {
+                                return [{ key: 'all', label: null, items }];
+                            }
+                            const cats = this.preset.usage_categories || {};
+                            const groups = {};
+                            for (const item of items) {
+                                const key = item.category || 'other';
+                                if (!groups[key]) groups[key] = [];
+                                groups[key].push(item);
+                            }
+                            const order = Object.keys(cats).length ? Object.keys(cats) : Object.keys(groups);
+                            return order.filter(k => groups[k]?.length).map(key => ({
+                                key,
+                                label: cats[key]?.icon ? cats[key].icon + ' ' + cats[key].label : key,
+                                items: groups[key],
+                            }));
+                        },
                         toggle(word) {
                             let items = this.val ? this.val.split(', ').filter(i => i) : [];
                             if (items.includes(word)) { items = items.filter(i => i !== word); } else { items.push(word); }
@@ -557,28 +646,40 @@
                                 <span x-text="preset.step03_guide || 'Select or type words you want highlighted as bold text/graphics inside your final render.'"></span>
                             </div>
                         </div>
-                        <input type="text" name="marketing_angle" x-model="val"
-                            :placeholder="preset.step03_placeholder || 'Type custom benefits or select below...'"
+                        <x-cgi-text-field
+                            name="marketing_angle"
+                            model="val"
                             required
-                            class="w-full bg-black/40 border border-gray-700/80 rounded-xl text-white focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500 p-2.5 outline-none transition-all text-sm shadow-inner placeholder-gray-600">
+                            x-bind:placeholder="preset.step03_placeholder || 'Type custom benefits or select below...'"
+                        />
 
-                        <div class="flex gap-1.5 mt-2.5 overflow-x-auto pb-2 custom-scrollbar snap-x">
-                            <template x-for="chip in chips" :key="chip.value">
-                                <button type="button" @click="toggle(chip.value)"
-                                    :class="isActive(chip) ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
-                                    class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">
-                                    <span x-text="chip.icon"></span>
-                                    <span x-text="' ' + chip.label"></span>
-                                </button>
+                        <p x-show="preset.step03_example" x-cloak class="mt-1.5 text-[9px] text-gray-500 italic leading-relaxed" x-text="preset.step03_example"></p>
+
+                        <div class="mt-2.5 space-y-2">
+                            <template x-for="group in chipGroups" :key="group.key">
+                                <div>
+                                    <p x-show="group.label" class="text-[8px] font-black uppercase tracking-[0.2em] text-gray-500 mb-1.5" x-text="group.label"></p>
+                                    <div class="flex gap-1.5 overflow-x-auto pb-1 custom-scrollbar snap-x">
+                                        <template x-for="chip in group.items" :key="chip.value">
+                                            <button type="button" @click="toggle(chip.value)"
+                                                :class="isActive(chip) ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-800/40 text-gray-400 border-gray-700'"
+                                                class="shrink-0 px-2.5 py-1 border rounded-md text-[9px] transition-all font-bold tracking-wider">
+                                                <span x-text="chip.icon"></span>
+                                                <span x-text="' ' + chip.label"></span>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
                             </template>
                         </div>
                     </div>
 
-                    {{-- 04. Product Usage (searchable dropdown, drives 05. Scene Background) --}}
+                    {{-- 04. Product Usage (manual input + searchable presets, drives 05) --}}
                     <div x-data="{
                         business: localStorage.getItem('cgi_business') || 'lighting',
                         usage: '',
                         usageLabel: '',
+                        selectedUsageId: '',
                         search: '',
                         open: false,
                         get options() {
@@ -587,19 +688,88 @@
                         get preset() {
                             return window.cgiBusinessPresets?.[this.business] || {};
                         },
+                        capBackgrounds(backgrounds) {
+                            return backgrounds || [];
+                        },
+                        emitUsageChange(backgrounds, autoVal = null) {
+                            const bgs = this.capBackgrounds(backgrounds);
+                            const detail = { backgrounds: bgs };
+                            if (autoVal !== null) detail.autoVal = autoVal;
+                            $dispatch('usage-changed', detail);
+                        },
+                        get categoryKeys() {
+                            const cats = this.preset.usage_categories || {};
+                            const keys = Object.keys(cats);
+                            if (!keys.length) return ['all'];
+                            const present = new Set(this.filteredOptions.map(o => o.category || 'other'));
+                            return keys.filter(k => present.has(k));
+                        },
+                        categoryLabel(key) {
+                            const cat = (this.preset.usage_categories || {})[key];
+                            if (!cat) return key;
+                            return (cat.icon ? cat.icon + ' ' : '') + (cat.label || key);
+                        },
+                        optionMatchesSearch(opt) {
+                            const q = (this.search || '').toLowerCase().trim();
+                            if (!q) return true;
+                            const hay = [opt.label, opt.id, opt.val, ...(opt.keywords || [])].join(' ').toLowerCase();
+                            return hay.includes(q);
+                        },
+                        optionsInCategory(key) {
+                            if (key === 'all') return this.filteredOptions;
+                            return this.filteredOptions.filter(o => (o.category || 'other') === key);
+                        },
+                        get filteredOptions() {
+                            return this.options.filter(o => this.optionMatchesSearch(o));
+                        },
                         resetUsage() {
                             this.usage = '';
                             this.usageLabel = '';
+                            this.selectedUsageId = '';
                             this.search = '';
                             this.open = false;
-                            $dispatch('usage-changed', { backgrounds: [] });
+                            this.emitUsageChange([], '');
                         },
                         pick(opt) {
                             this.usage = opt.val;
                             this.usageLabel = opt.icon + '  ' + opt.label;
+                            this.selectedUsageId = opt.id || '';
                             this.open = false;
                             this.search = '';
-                            $dispatch('usage-changed', { backgrounds: opt.backgrounds || [] });
+                            const bgs = this.capBackgrounds(opt.backgrounds || []);
+                            const autoVal = bgs[0]?.val || '';
+                            this.emitUsageChange(bgs, autoVal);
+                        },
+                        syncFromInput() {
+                            const trimmed = (this.usage || '').trim();
+                            if (!trimmed) {
+                                this.usageLabel = '';
+                                this.selectedUsageId = '';
+                                this.emitUsageChange([], '');
+                                return;
+                            }
+                            const exact = this.options.find(o => o.val === trimmed);
+                            if (exact) {
+                                this.usageLabel = exact.icon + '  ' + exact.label;
+                                this.selectedUsageId = exact.id || '';
+                                const bgs = this.capBackgrounds(exact.backgrounds || []);
+                                this.emitUsageChange(bgs, bgs[0]?.val || '');
+                                return;
+                            }
+                            this.usageLabel = '';
+                            this.selectedUsageId = '';
+                            let best = null, bestScore = 0;
+                            for (const opt of this.options) {
+                                const s = this.scoreUsage(opt, trimmed, document.querySelector('[name=product_name]')?.value || '');
+                                if (s > bestScore) { bestScore = s; best = opt; }
+                            }
+                            if (bestScore >= 55 && best) {
+                                this.selectedUsageId = best.id || '';
+                                const bgs = this.capBackgrounds(best.backgrounds || []);
+                                this.emitUsageChange(bgs, bgs[0]?.val || '');
+                            } else {
+                                this.emitUsageChange([]);
+                            }
                         },
                         scoreUsage(opt, hint, productName) {
                             const t = (hint || '').toLowerCase();
@@ -657,25 +827,25 @@
                             return backgrounds[0]?.val || '';
                         }
                     }"
-                    x-init="$nextTick(() => { const b = document.getElementById('cgi_business_type')?.value; if (b) business = b; })"
+                    x-init="$nextTick(() => { const b = document.getElementById('cgi_business_type')?.value; if (b) business = b; usage = @js(old('visual_prop', '')); if (usage) syncFromInput(); })"
                     @cgi-business-changed.window="business = $event.detail.business; resetUsage(); $dispatch('cgi-autofill-background', { backgrounds: [], val: '' });"
                     @cgi-autofill-reset.window="resetUsage();"
                     @cgi-autofill-data.window="
                         const opt = matchUsageFromDetail($event.detail);
                         if (opt) {
                             pick(opt);
-                            const bgVal = resolveBackgroundVal($event.detail.atmosphere || '', opt.backgrounds);
-                            $dispatch('cgi-autofill-background', { backgrounds: opt.backgrounds, val: bgVal });
+                            const bgs = capBackgrounds(opt.backgrounds || []);
+                            const bgVal = resolveBackgroundVal($event.detail.atmosphere || '', bgs);
+                            $dispatch('cgi-autofill-background', { backgrounds: bgs, val: bgVal });
                         } else {
-                            usage = '';
+                            usage = ($event.detail.visual_prop || '').trim();
                             usageLabel = '';
-                            $dispatch('usage-changed', { backgrounds: [] });
+                            selectedUsageId = '';
+                            syncFromInput();
                             const atmOnly = ($event.detail.atmosphere || '').trim();
                             $dispatch('cgi-autofill-background', { backgrounds: [], val: atmOnly });
                         }
                     ">
-                        <input type="hidden" name="visual_prop" :value="usage">
-
                         <div class="flex items-center gap-2 mb-2 relative group w-fit">
                             <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">04.
                                 <span x-text="preset.step04_label || 'How is the product used in the scene?'"></span></label>
@@ -688,18 +858,30 @@
                             <div
                                 class="absolute left-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-gray-800 border border-gray-700 text-[10px] text-gray-300 rounded-xl shadow-2xl z-[60] leading-relaxed">
                                 <strong class="text-white block mb-1">Guide:</strong>
-                                <span x-text="preset.step04_guide || 'Search and pick how the product is used. Your choice decides which matching scene backgrounds appear in step 05.'"></span>
+                                <span x-text="preset.step04_guide || 'Type your own usage or pick a preset. Your choice loads matching scene backgrounds in step 05.'"></span>
                             </div>
                         </div>
 
-                        {{-- Searchable dropdown --}}
-                        <div class="relative">
+                        {{-- Manual input (always available) — submitted value --}}
+                        <x-cgi-text-field
+                            name="visual_prop"
+                            model="usage"
+                            required
+                            @input="syncFromInput()"
+                            x-bind:placeholder="preset.step04_manual_placeholder || 'Type custom usage, or pick a preset below...'"
+                        />
+
+                        <p x-show="preset.step04_example" x-cloak class="mt-1.5 text-[9px] text-gray-500 italic leading-relaxed" x-text="preset.step04_example"></p>
+
+                        <p x-show="usageLabel" x-cloak class="mt-2 text-[9px] text-blue-400/80 font-bold uppercase tracking-widest truncate" x-text="usageLabel"></p>
+
+                        {{-- Searchable preset picker --}}
+                        <div class="relative mt-2">
                             <button type="button" @click="open = !open"
-                                class="w-full bg-[#111] border border-gray-700/80 rounded-xl p-2.5 flex items-center justify-between hover:border-blue-500/50 transition-all focus:ring-1 focus:ring-blue-500/50 h-[42px]">
-                                <span class="text-[11px] font-bold truncate"
-                                    :class="usageLabel ? 'text-gray-200' : 'text-gray-500'"
-                                    x-text="usageLabel || 'Select how the product is used...'"></span>
-                                <svg class="w-3.5 h-3.5 text-gray-500 shrink-0 ml-1 transition-transform"
+                                class="w-full bg-gray-800/40 border border-gray-700/80 rounded-lg p-2 flex items-center justify-between hover:border-blue-500/50 transition-all focus:ring-1 focus:ring-blue-500/50">
+                                <span class="text-[9px] font-black uppercase tracking-widest text-gray-400"
+                                    x-text="business === 'lighting' ? 'Select install & usage type' : 'Browse usage presets'"></span>
+                                <svg class="w-3 h-3 text-gray-500 shrink-0 ml-1 transition-transform"
                                     :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                 </svg>
@@ -717,36 +899,95 @@
                                     </div>
                                 </div>
                                 <div class="max-h-56 overflow-y-auto custom-scrollbar p-1">
-                                    <template x-for="opt in options" :key="opt.id">
-                                        <button type="button"
-                                            x-show="(opt.label + ' ' + opt.id + ' ' + opt.val).toLowerCase().includes(search.toLowerCase())"
-                                            @click="pick(opt)"
-                                            :class="usage === opt.val ? 'bg-blue-600/20 border border-blue-500/30' : 'border border-transparent'"
-                                            class="w-full flex items-center gap-2 p-2 rounded hover:bg-blue-600/20 transition-colors text-left">
-                                            <span class="text-base leading-none shrink-0" x-text="opt.icon"></span>
-                                            <span class="text-[10px] font-bold text-gray-200 truncate flex-1" x-text="opt.label"></span>
-                                            <div x-show="usage === opt.val" class="shrink-0 text-blue-500 pr-1">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                                            </div>
-                                        </button>
+                                    <template x-if="filteredOptions.length === 0">
+                                        <p class="p-3 text-center text-[9px] text-gray-500 font-bold uppercase tracking-widest">No presets match — use your custom text above</p>
+                                    </template>
+                                    <template x-for="catKey in categoryKeys" :key="catKey">
+                                        <div x-show="optionsInCategory(catKey).length > 0">
+                                            <p x-show="categoryKeys.length > 1 && catKey !== 'all'" class="px-2 pt-2 pb-1 text-[8px] font-black uppercase tracking-[0.2em] text-gray-500 sticky top-0 bg-[#1a1a1a]" x-text="categoryLabel(catKey)"></p>
+                                            <template x-for="opt in optionsInCategory(catKey)" :key="opt.id">
+                                                <button type="button"
+                                                    @click="pick(opt)"
+                                                    :class="selectedUsageId === opt.id ? 'bg-blue-600/20 border border-blue-500/30' : 'border border-transparent'"
+                                                    class="w-full flex items-center gap-2 p-2 rounded hover:bg-blue-600/20 transition-colors text-left">
+                                                    <span class="text-base leading-none shrink-0" x-text="opt.icon"></span>
+                                                    <span class="text-[10px] font-bold text-gray-200 truncate flex-1" x-text="opt.label"></span>
+                                                    <div x-show="selectedUsageId === opt.id" class="shrink-0 text-blue-500 pr-1">
+                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                                                    </div>
+                                                </button>
+                                            </template>
+                                        </div>
                                     </template>
                                 </div>
                             </div>
                         </div>
+
+                        <p class="mt-2 text-[9px] text-gray-500 font-bold uppercase tracking-widest"
+                            x-text="business === 'lighting' ? 'Pick install type — Step 05 loads related scene examples in the dropdown.' : 'Type freely above, or pick a preset to load step 05 scene suggestions.'">
+                        </p>
                     </div>
 
                     {{-- 05. Background & 06. Movement --}}
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6 md:col-span-1">
                         {{-- 05. Background (suggestions depend on step 04) --}}
                         <div x-data="{
+                            business: localStorage.getItem('cgi_business') || 'lighting',
                             val: '',
-                            options: []
-                        }" @usage-changed.window="options = $event.detail.backgrounds || [];"
-                           @cgi-autofill-reset.window="val = ''; options = [];"
-                           @cgi-autofill-background.window="options = $event.detail.backgrounds || []; val = $event.detail.val || '';">
+                            options: [],
+                            sceneOpen: false,
+                            sceneIndex: -1,
+                            get preset() { return window.cgiBusinessPresets?.[this.business] || {}; },
+                            syncSceneIndex() {
+                                const idx = this.options.findIndex(o => o.val === this.val);
+                                this.sceneIndex = idx >= 0 ? idx : (this.options.length ? 0 : -1);
+                            },
+                            selectedSceneLabel() {
+                                const match = this.options.find(o => o.val === this.val);
+                                return match?.label || '';
+                            },
+                            selectScene(bg) {
+                                this.val = bg.val;
+                                this.sceneOpen = false;
+                                this.sceneIndex = this.options.findIndex(o => o.val === bg.val);
+                            },
+                            toggleSceneDropdown() {
+                                this.sceneOpen = !this.sceneOpen;
+                                if (this.sceneOpen) this.syncSceneIndex();
+                            },
+                            onSceneKeydown(e) {
+                                if (!this.options.length) return;
+                                if (!this.sceneOpen && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+                                    e.preventDefault();
+                                    this.sceneOpen = true;
+                                    this.syncSceneIndex();
+                                    return;
+                                }
+                                if (!this.sceneOpen) return;
+                                if (e.key === 'ArrowDown') {
+                                    e.preventDefault();
+                                    this.sceneIndex = Math.min(this.sceneIndex + 1, this.options.length - 1);
+                                    this.$refs.sceneList?.children[this.sceneIndex]?.scrollIntoView({ block: 'nearest' });
+                                } else if (e.key === 'ArrowUp') {
+                                    e.preventDefault();
+                                    this.sceneIndex = Math.max(this.sceneIndex - 1, 0);
+                                    this.$refs.sceneList?.children[this.sceneIndex]?.scrollIntoView({ block: 'nearest' });
+                                } else if (e.key === 'Enter' && this.sceneIndex >= 0) {
+                                    e.preventDefault();
+                                    this.selectScene(this.options[this.sceneIndex]);
+                                } else if (e.key === 'Escape') {
+                                    this.sceneOpen = false;
+                                }
+                            }
+                        }"
+                        x-init="$nextTick(() => { const b = document.getElementById('cgi_business_type')?.value; if (b) business = b; })"
+                        @cgi-business-changed.window="business = $event.detail.business; sceneOpen = false; sceneIndex = -1;"
+                        @usage-changed.window="options = $event.detail.backgrounds || []; sceneOpen = false; if ($event.detail.autoVal !== undefined) val = $event.detail.autoVal; syncSceneIndex();"
+                           @cgi-autofill-reset.window="val = ''; options = []; sceneOpen = false; sceneIndex = -1;"
+                           @cgi-autofill-background.window="options = $event.detail.backgrounds || []; val = $event.detail.val || ''; syncSceneIndex();">
                             <div class="flex items-center gap-2 mb-2 relative group w-fit">
                                 <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">05.
-                                    Scene Background.</label>
+                                    <span x-text="preset.step05_label || 'Scene Background.'"></span></label>
                                 <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -755,37 +996,76 @@
                                 </div>
                                 <div
                                     class="absolute left-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-gray-800 border border-gray-700 text-[10px] text-gray-300 rounded-xl shadow-2xl z-[60] leading-relaxed">
-                                    <strong class="text-white block mb-1">Guide:</strong> Pick a suggested scene based on
-                                    how the product is used (step 04), or type your own custom background below.
+                                    <strong class="text-white block mb-1">Guide:</strong>
+                                    <span x-text="preset.step05_guide || 'Pick a suggested scene based on how the product is used (step 04), or type your own custom background below.'"></span>
                                 </div>
                             </div>
 
                             {{-- Manual input (always available) — this is the submitted value --}}
-                            <input type="text" name="atmosphere" x-model="val" required
-                                placeholder="Type a custom scene, or pick a suggestion below..."
-                                class="w-full bg-black/40 border border-gray-700/80 rounded-xl text-white focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500 p-2.5 outline-none transition-all text-sm shadow-inner placeholder-gray-600">
+                            <x-cgi-text-field
+                                name="atmosphere"
+                                model="val"
+                                required
+                                x-bind:placeholder="preset.step05_placeholder || 'Type a custom scene, or pick a suggestion below...'"
+                            />
 
-                            {{-- Dependent scene suggestions from step 04 (fills the input above) --}}
-                            <select x-show="options.length > 0" x-cloak x-model="val"
-                                class="w-full mt-2 bg-gray-800/40 border border-gray-700 rounded-lg text-[10px] text-gray-300 p-1.5 outline-none font-bold uppercase tracking-widest cursor-pointer">
-                                <option value="">-- Suggested scenes for step 04 --</option>
-                                <template x-for="bg in options" :key="bg.val">
-                                    <option :value="bg.val" x-text="bg.label"></option>
-                                </template>
-                            </select>
+                            <p x-show="preset.step05_example" x-cloak class="mt-1.5 text-[9px] text-gray-500 italic leading-relaxed" x-text="preset.step05_example"></p>
+
+                            {{-- Keyboard-navigable scene dropdown (↑ ↓ Enter) --}}
+                            <div x-show="options.length > 0" x-cloak class="relative mt-2 outline-none" tabindex="0" @keydown="onSceneKeydown($event)">
+                                <p class="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1.5"
+                                    x-text="preset.step05_suggestions_label || 'Suggested scenes'"></p>
+                                <button type="button"
+                                    @click="toggleSceneDropdown()"
+                                    class="w-full bg-gray-800/40 border border-gray-700/80 rounded-lg px-3 py-2 flex items-center justify-between hover:border-blue-500/50 transition-all focus:ring-1 focus:ring-blue-500/50 text-left"
+                                    :class="sceneOpen ? 'border-blue-500/50 ring-1 ring-blue-500/30' : ''">
+                                    <span class="text-[10px] font-bold truncate"
+                                        :class="selectedSceneLabel() ? 'text-gray-200' : 'text-gray-500'"
+                                        x-text="selectedSceneLabel() || (preset.step05_dropdown_placeholder || 'Select suggested scene...')"></span>
+                                    <svg class="w-3 h-3 text-gray-500 shrink-0 ml-2 transition-transform"
+                                        :class="sceneOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </button>
+                                <p class="mt-1 text-[8px] text-gray-600 font-bold uppercase tracking-widest">↑ ↓ to browse · Enter to select</p>
+
+                                <div x-show="sceneOpen" @click.away="sceneOpen = false" x-cloak
+                                    class="absolute left-0 right-0 top-full mt-1 bg-[#1a1a1a] border border-gray-700 rounded-xl shadow-2xl z-[70] overflow-hidden">
+                                    <div x-ref="sceneList" class="max-h-48 overflow-y-auto custom-scrollbar p-1">
+                                        <template x-for="(bg, idx) in options" :key="bg.val">
+                                            <button type="button"
+                                                @click="selectScene(bg)"
+                                                :class="(sceneOpen && sceneIndex === idx) || val === bg.val ? 'bg-blue-600/20 border border-blue-500/30 text-white' : 'border border-transparent text-gray-300'"
+                                                class="w-full flex items-center gap-2 px-3 py-2 rounded text-left text-[10px] font-bold transition-colors hover:bg-blue-600/10">
+                                                <span class="truncate flex-1" x-text="bg.label"></span>
+                                                <svg x-show="val === bg.val" class="w-3.5 h-3.5 shrink-0 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                                                </svg>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
 
                             {{-- Hint shown until a usage is chosen in step 04 --}}
                             <p x-show="options.length === 0"
-                                class="mt-2 text-[9px] text-gray-500 font-bold uppercase tracking-widest">
-                                Pick option 04 to load matching scene suggestions — or just type your own above.
+                                class="mt-2 text-[9px] text-gray-500 font-bold uppercase tracking-widest"
+                                x-text="business === 'lighting' ? 'Complete Step 04 first — related scene examples load in the dropdown.' : 'Pick Step 04 from the dropdown below — matching rooms load in Step 05.'">
                             </p>
                         </div>
 
                         {{-- 06. Movement --}}
-                        <div x-data="{ val: '' }" @cgi-autofill-data.window="val = $event.detail.camera_motion || $event.detail.movement || $event.detail.camera || val">
+                        <div x-data="{
+                            business: localStorage.getItem('cgi_business') || 'lighting',
+                            val: '',
+                            get preset() { return window.cgiBusinessPresets?.[this.business] || {}; }
+                        }"
+                        x-init="$nextTick(() => { const b = document.getElementById('cgi_business_type')?.value; if (b) business = b; })"
+                        @cgi-business-changed.window="business = $event.detail.business;"
+                        @cgi-autofill-data.window="val = $event.detail.camera_motion || $event.detail.movement || $event.detail.camera || val">
                             <div class="flex items-center gap-2 mb-2 relative group w-fit">
                                 <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">06.
-                                    Camera Style.</label>
+                                    <span x-text="preset.step06_label || 'Camera Style.'"></span></label>
                                 <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -794,13 +1074,16 @@
                                 </div>
                                 <div
                                     class="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-gray-800 border border-gray-700 text-[10px] text-gray-300 rounded-xl shadow-2xl z-[60] leading-relaxed">
-                                    <strong class="text-white block mb-1">Guide:</strong> Define how the camera moves
-                                    around the product to create dynamic, professional video shots.
+                                    <strong class="text-white block mb-1">Guide:</strong>
+                                    <span x-text="preset.step06_guide || 'Define how the camera moves around the product to create dynamic, professional video shots.'"></span>
                                 </div>
                             </div>
-                            <input type="text" name="camera_motion" x-model="val"
-                                placeholder="Type custom camera or select..." required
-                                class="w-full bg-black/40 border border-gray-700/80 rounded-xl text-white focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500 p-2.5 outline-none transition-all text-sm shadow-inner placeholder-gray-600">
+                            <x-cgi-text-field
+                                name="camera_motion"
+                                model="val"
+                                required
+                                x-bind:placeholder="preset.step06_placeholder || 'Type custom camera or select...'"
+                            />
 
                             <select x-model="val"
                                 class="w-full mt-2 bg-gray-800/40 border border-gray-700 rounded-lg text-[10px] text-gray-300 p-1.5 outline-none font-bold uppercase tracking-widest cursor-pointer">
@@ -822,10 +1105,17 @@
                     </div>
 
                     {{-- 07. Layout --}}
-                    <div class="md:col-span-1" x-data="{ comp: '' }" @cgi-autofill-data.window="comp = $event.detail.composition || $event.detail.layout || $event.detail.position || comp">
+                    <div class="md:col-span-1" x-data="{
+                        business: localStorage.getItem('cgi_business') || 'lighting',
+                        comp: '',
+                        get preset() { return window.cgiBusinessPresets?.[this.business] || {}; }
+                    }"
+                    x-init="$nextTick(() => { const b = document.getElementById('cgi_business_type')?.value; if (b) business = b; })"
+                    @cgi-business-changed.window="business = $event.detail.business; comp = '';"
+                    @cgi-autofill-data.window="comp = $event.detail.composition || $event.detail.layout || $event.detail.position || comp">
                         <div class="flex items-center gap-2 mb-2 relative group w-fit">
                             <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">07.
-                                Product Possitioning?</label>
+                                <span x-text="preset.step07_label || 'Product Positioning'"></span></label>
                             <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -834,14 +1124,18 @@
                             </div>
                             <div
                                 class="absolute left-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-gray-800 border border-gray-700 text-[10px] text-gray-300 rounded-xl shadow-2xl z-[60] leading-relaxed">
-                                <strong class="text-white block mb-1">Guide:</strong> Select where your product sits in
-                                the frame. Framing to the side helps leave room for text or graphics.
+                                <strong class="text-white block mb-1">Guide:</strong>
+                                <span x-text="preset.step07_guide || 'Select where your product sits in the frame. Framing to the side helps leave room for text or graphics.'"></span>
                             </div>
                         </div>
 
-                        <input type="text" name="composition" x-model="comp"
-                            placeholder="Type custom layout or select below..." required
-                            class="w-full bg-black/40 border border-gray-700/80 rounded-xl text-white focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500 p-2.5 outline-none transition-all text-sm shadow-inner placeholder-gray-600 mb-2.5">
+                        <x-cgi-text-field
+                            name="composition"
+                            model="comp"
+                            required
+                            class="mb-2.5"
+                            x-bind:placeholder="preset.step07_placeholder || 'Type custom layout or select below...'"
+                        />
 
                         <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
                             <div @click="comp = 'Product on far left side. Negative space on right.'"
@@ -908,10 +1202,18 @@
                     </div>
 
                     {{-- 08. Lighting --}}
-                    <div class="md:col-span-1" x-data="{ light: '' }" @cgi-autofill-data.window="light = $event.detail.lighting_style || $event.detail.lighting || $event.detail.light || light">
+                    <div class="md:col-span-1" x-data="{
+                        business: localStorage.getItem('cgi_business') || 'lighting',
+                        light: '',
+                        get preset() { return window.cgiBusinessPresets?.[this.business] || {}; },
+                        get lightingChips() { return this.preset.lighting_style_chips || []; }
+                    }"
+                    x-init="$nextTick(() => { const b = document.getElementById('cgi_business_type')?.value; if (b) business = b; })"
+                    @cgi-business-changed.window="business = $event.detail.business; light = '';"
+                    @cgi-autofill-data.window="light = $event.detail.lighting_style || $event.detail.lighting || $event.detail.light || light">
                         <div class="flex items-center gap-2 mb-2 relative group w-fit">
                             <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">08.
-                                Lighting & Color preference.</label>
+                                <span x-text="preset.step08_label || 'Lighting & Color preference.'"></span></label>
                             <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -920,16 +1222,31 @@
                             </div>
                             <div
                                 class="absolute left-0 md:left-auto md:right-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-gray-800 border border-gray-700 text-[10px] text-gray-300 rounded-xl shadow-2xl z-[60] leading-relaxed">
-                                <strong class="text-white block mb-1">Guide:</strong> Pick a lighting style to set the
-                                overall mood, contrast, and visual color palette of your scene.
+                                <strong class="text-white block mb-1">Guide:</strong>
+                                <span x-text="preset.step08_guide || 'Pick a lighting style to set the overall mood, contrast, and visual color palette of your scene.'"></span>
                             </div>
                         </div>
 
-                        <input type="text" name="lighting_style" x-model="light"
-                            placeholder="Type custom lighting or select below..." required
-                            class="w-full bg-black/40 border border-gray-700/80 rounded-xl text-white focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500 p-2.5 outline-none transition-all text-sm shadow-inner placeholder-gray-600 mb-2.5">
+                        <x-cgi-text-field
+                            name="lighting_style"
+                            model="light"
+                            required
+                            class="mb-2.5"
+                            x-bind:placeholder="preset.step08_placeholder || 'Type custom lighting or select below...'"
+                        />
 
-                        <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        <div x-show="lightingChips.length > 0" class="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-2">
+                            <template x-for="chip in lightingChips" :key="chip.value">
+                                <button type="button" @click="light = chip.value"
+                                    :class="light === chip.value ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                                    class="p-1 border rounded-lg hover:border-blue-500/50 transition-all text-center">
+                                    <span class="text-sm block mb-0.5" x-text="chip.icon"></span>
+                                    <h4 class="text-[8px] font-bold uppercase tracking-wider" x-text="chip.label"></h4>
+                                </button>
+                            </template>
+                        </div>
+
+                        <div x-show="lightingChips.length === 0" class="grid grid-cols-3 sm:grid-cols-4 gap-2">
                             <div @click="light = 'Warm white glow, cozy 3000K warm light spilling naturally from the product'"
                                 :class="light.includes('Warm white') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
                                 class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
@@ -1100,6 +1417,14 @@
             </form>
         </div>
     </div>
+
+    <script>
+        window.cgiGrowField = function (el) {
+            if (!el) return;
+            el.style.height = 'auto';
+            el.style.height = Math.max(el.scrollHeight, 42) + 'px';
+        };
+    </script>
 
     <style>
         .custom-scrollbar::-webkit-scrollbar {

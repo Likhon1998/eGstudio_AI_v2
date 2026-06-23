@@ -10,16 +10,21 @@ $sharedLayoutDirectives = [
 
 return [
     'lighting' => array_merge(require __DIR__ . '/cgi_business/lighting_form.php', [
-        'label' => 'Lighting Company',
+        'label' => 'Lumina Elite',
+        'tagline' => 'Premium Lighting Studio',
         'icon' => '💡',
-        'step04_label' => 'How is the product used in the scene?',
-        'step04_guide' => 'Search and pick the light type and how it is used (e.g. halogen floodlight on a badminton court). Your choice decides which matching scene backgrounds appear in step 05.',
-        'step04_search_placeholder' => 'Search light usage...',
+        'step04_label' => 'Install & usage',
+        'step04_guide' => 'How the product is mounted and used — switched ON. Lights: ceiling, wall, track, or pole. Switches: wall plate with room lights ON in Step 05.',
+        'step04_search_placeholder' => 'Search: spotlight, panel, switch, dimmer...',
+        'step04_manual_placeholder' => 'E.g. Track spotlight on retail display, switched ON',
         'usage_options' => require __DIR__ . '/cgi_business/lighting_usage.php',
         'brand_directives' => array_merge($sharedLayoutDirectives, [
-            'CRITICAL: the same type of lighting product must appear installed and switched ON inside the scene, fitted exactly as it would be in real life (e.g. tube lights mounted on the ceiling, bulbs sitting in pendant or wall fixtures, panel lights recessed in the ceiling, string lights strung across the space), clearly glowing and visibly lighting up the environment so the poster demonstrates the product actually in use.',
-            'That installed product is the primary light source: the whole scene must be illuminated naturally and warmly by its own glow, with believable light spill, soft reflections, gentle shadows and a cozy, inviting atmosphere.',
-            'Do NOT place any bright lights or product fixtures inside the top and bottom safe bands.',
+            'ANTI-HALLUCINATION (MANDATORY): The hero cutout product MUST match the uploaded reference image exactly — same product category, shape, color, and branding. Never swap a switch for a bulb or a panel for a pendant.',
+            'SCENE PRODUCT RULE: The product installed inside the main scene MUST be the same type as Step 01 and the reference image. One product type only — no mixing categories.',
+            'FOR LIGHT FIXTURES (bulb, tube, panel, downlight, flood, string, chandelier, street, high bay): show physically correct real-world installation — ceiling recessed, surface mounted on ceiling/wall, pole mounted, pendant from cable, or in holder. Fixture must be switched ON and visibly illuminating the room with realistic shadows and color temperature.',
+            'FOR SWITCHES & CONTROLS (modular, 2-way, smart, dimmer, fan regulator, touch panel, bell push, PIR, socket combo, MCB, remote, card key): mount on a standard modular wall plate at realistic height (beside door, bed, or kitchen entrance). Show ON state (lit indicator, rocker down, or touch glow). Room lights controlled by that switch MUST be visibly ON in the same frame — proving the switch works.',
+            'DO NOT: float products without mounting, show wrong room types, add extra unrelated products, use cartoon or illustration style, or place bright fixtures inside top/bottom safe bands.',
+            'Photorealistic advertising photography only. Match atmosphere and usage inputs literally — do not invent venues or props not described.',
         ]),
     ]),
 

@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="login-url" content="{{ route('login') }}">
     <meta name="gallery-download-endpoint" content="{{ route('gallery.download-image') }}">
     <title>{{ config('app.name', 'eGStudio_AI') }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -288,15 +289,45 @@
 
     </div>
 
-    {{-- Keep the Laravel session alive by pinging the server every 60 minutes --}}
+    {{-- Keep session + CSRF fresh while users work on long studio forms --}}
+    @auth
     <script>
-        setInterval(function () {
-            fetch('/up', {
-                method: 'GET',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            }).catch(() => console.log('Keep-alive ping failed'));
-        }, 1000 * 60 * 60); // 60 minutes
+        (function () {
+            const keepAliveUrl = @json(route('session.keep-alive'));
+            const intervalMs = 1000 * 60 * 15; // 15 minutes
+
+            async function pingSession() {
+                try {
+                    const response = await fetch(keepAliveUrl, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        },
+                        credentials: 'same-origin',
+                    });
+
+                    if (response.status === 419 || response.status === 401) {
+                        window.redirectToLoginAfterSessionExpired?.();
+                        return;
+                    }
+
+                    if (!response.ok) {
+                        return;
+                    }
+
+                    const data = await response.json();
+                    window.refreshCsrfToken?.(data.csrf_token);
+                } catch (error) {
+                    // Network blip — ignore; next ping will retry
+                }
+            }
+
+            pingSession();
+            setInterval(pingSession, intervalMs);
+        })();
     </script>
+    @endauth
 
     {{-- Global Loading Handler --}}
     <script>

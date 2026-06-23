@@ -1,11 +1,31 @@
 <?php
 
-return [
+$lightsCategory = 'lights';
+$switchesCategory = 'switches';
+
+$lightUsage = ', switched ON, correct mount, matches reference product';
+$switchUsage = ', wall plate beside door, switch ON, room lights glowing, matches reference';
+
+$usageSortOrder = [
+    'Pendant Bulb' => 1, 'LED Panel' => 2, 'Tube Light' => 3, 'Downlights' => 4,
+    'Wall Light' => 5, 'Table / Desk Lamp' => 6, 'Chandelier' => 7, 'String Lights' => 8,
+    'High Bay Light' => 9, 'Halogen Sports Floodlight' => 10, 'Outdoor Flood Light' => 11,
+    'Street Light' => 12, 'Focus Light' => 13, 'Spotlight / Track' => 14, 'Garden / Landscape' => 15,
+    'Pool / Underwater' => 16, 'Emergency / Exit' => 17,
+    'Modular 1-Way Switch' => 20, '2-Way Staircase Switch' => 21, 'Dimmer Switch' => 22,
+    'Fan Regulator Switch' => 23, 'Smart WiFi Switch' => 24, 'Glass Touch Panel' => 25,
+    'Multi-Gang Switch Plate' => 26, 'Bell Push Switch' => 30, 'PIR Motion Switch' => 31,
+    'Socket Switch Combo' => 32, 'Remote Wireless Switch' => 33, 'Hotel Card Key Switch' => 34,
+    'Timer / Schedule Switch' => 35, 'MCB Distribution Panel' => 36, 'Industrial Rocker Switch' => 37,
+];
+
+$options = [
     [
         'id' => 'Tube Light',
+        'category' => $lightsCategory,
         'icon' => '📏',
         'label' => 'Tube Light (ceiling / wall)',
-        'val' => 'Tube light installed and glowing on the ceiling or wall',
+        'val' => 'LED tube batten light surface-mounted on ceiling or wall, switched ON, evenly lighting the room'.$lightUsage,
         'keywords' => ['tube', 'batten', 't5', 't8'],
         'backgrounds' => [
             ['label' => '🍳 Modern Kitchen', 'val' => 'Bright modern kitchen with tube lights glowing on the ceiling'],
@@ -21,9 +41,10 @@ return [
     ],
     [
         'id' => 'LED Panel',
+        'category' => $lightsCategory,
         'icon' => '🔲',
         'label' => 'LED Panel (ceiling)',
-        'val' => 'LED panel light fitted in the ceiling, switched on',
+        'val' => 'Slim LED panel light recessed or surface-mounted in ceiling, switched ON, bright uniform downlight'.$lightUsage,
         'keywords' => ['panel', 'ceiling panel', 'flat panel', 'slim panel'],
         'backgrounds' => [
             ['label' => '💼 Office Space', 'val' => 'Modern office with recessed LED ceiling panels glowing'],
@@ -35,9 +56,10 @@ return [
     ],
     [
         'id' => 'Downlights',
+        'category' => $lightsCategory,
         'icon' => '🔆',
         'label' => 'Recessed Downlights',
-        'val' => 'Recessed downlights lighting up the room',
+        'val' => 'Recessed LED downlights installed in ceiling cutouts, switched ON, lighting the room'.$lightUsage,
         'keywords' => ['downlight', 'recessed'],
         'backgrounds' => [
             ['label' => '🛋️ Living Room', 'val' => 'Cozy modern living room lit by recessed downlights'],
@@ -49,22 +71,30 @@ return [
     ],
     [
         'id' => 'Pendant Bulb',
+        'category' => $lightsCategory,
         'icon' => '💡',
-        'label' => 'Pendant Bulb',
-        'val' => 'Glowing bulbs in pendant fixtures over the table',
-        'keywords' => ['bulb', 'pendant', 'smart rgb', 'led bulb'],
+        'label' => 'Pendant Bulb / LED Bulb',
+        'val' => 'LED bulb installed in pendant holder or ceiling rose, switched ON, warm glow over the area'.$lightUsage,
+        'keywords' => ['bulb', 'pendant', 'smart rgb', 'led bulb', 'holder'],
         'backgrounds' => [
-            ['label' => '👨‍👩‍👧 Family Dining', 'val' => 'Family dining room with glowing pendant bulbs over the table'],
-            ['label' => '🍽️ Restaurant / Cafe', 'val' => 'Cozy restaurant with pendant bulb lights over the tables'],
-            ['label' => '🍳 Kitchen Island', 'val' => 'Modern kitchen island with glowing pendant bulb lights'],
-            ['label' => '🛋️ Living Room', 'val' => 'Stylish living room with pendant bulb lighting'],
+            ['label' => 'Family Dining', 'val' => 'Family dining room with glowing pendant bulbs over the table'],
+            ['label' => 'Restaurant / Cafe', 'val' => 'Cozy restaurant with pendant bulb lights over the tables'],
+            ['label' => 'Kitchen Island', 'val' => 'Modern kitchen island with glowing pendant bulb lights'],
+            ['label' => 'Living Room', 'val' => 'Stylish living room with pendant bulb lighting'],
+            ['label' => 'Bedroom Ceiling', 'val' => 'Bedroom with warm glowing LED bulb in ceiling holder'],
+            ['label' => 'Cafe Bar', 'val' => 'Trendy cafe bar with pendant bulbs hanging over the counter'],
+            ['label' => 'Hotel Room', 'val' => 'Boutique hotel room with warm pendant bulb beside the bed'],
+            ['label' => 'Breakfast Nook', 'val' => 'Bright breakfast nook with pendant bulb over a small dining table'],
+            ['label' => 'Study Room', 'val' => 'Home study with pendant bulb casting warm light over the desk'],
+            ['label' => 'Porch Entry', 'val' => 'Home porch entry with a glowing pendant bulb in the ceiling holder'],
         ],
     ],
     [
         'id' => 'String Lights',
+        'category' => $lightsCategory,
         'icon' => '✨',
         'label' => 'String / Fairy Lights',
-        'val' => 'Warm string lights strung across the space, glowing',
+        'val' => 'Warm string lights strung across the space, glowing'.$lightUsage,
         'keywords' => ['string', 'fairy'],
         'backgrounds' => [
             ['label' => '🏡 Patio Gazebo (Night)', 'val' => 'Cozy outdoor wooden patio gazebo at night with warm string lights strung across, glowing'],
@@ -76,9 +106,10 @@ return [
     ],
     [
         'id' => 'Wall Light',
+        'category' => $lightsCategory,
         'icon' => '🛋️',
         'label' => 'Wall Light / Sconce',
-        'val' => 'Wall-mounted light glowing on the wall',
+        'val' => 'Wall-mounted sconce switched ON, casting light on the wall'.$lightUsage,
         'keywords' => ['wall light', 'sconce'],
         'backgrounds' => [
             ['label' => '🛋️ Living Room', 'val' => 'Modern living room with wall-mounted lights glowing'],
@@ -90,9 +121,10 @@ return [
     ],
     [
         'id' => 'Halogen Sports Floodlight',
+        'category' => $lightsCategory,
         'icon' => '🏟️',
         'label' => 'Halogen Sports Floodlight',
-        'val' => 'Halogen floodlights mounted high, brightly illuminating the court',
+        'val' => 'Halogen floodlights mounted high, illuminating the sports court'.$lightUsage,
         'keywords' => ['halogen', 'badminton', 'sports flood', 'stadium'],
         'backgrounds' => [
             ['label' => '🏸 Badminton Court', 'val' => 'Indoor badminton court brightly lit by overhead halogen floodlights'],
@@ -104,9 +136,10 @@ return [
     ],
     [
         'id' => 'Outdoor Flood Light',
+        'category' => $lightsCategory,
         'icon' => '🏢',
         'label' => 'Outdoor Flood Light',
-        'val' => 'Flood lights mounted and washing the area with bright light',
+        'val' => 'Outdoor flood lights mounted, washing the area with bright light'.$lightUsage,
         'keywords' => ['flood light', 'floodlight', 'outdoor flood', 'weatherproof'],
         'backgrounds' => [
             ['label' => '🏢 Building Facade', 'val' => 'Building facade at night lit up by mounted flood lights'],
@@ -118,9 +151,10 @@ return [
     ],
     [
         'id' => 'High Bay Light',
+        'category' => $lightsCategory,
         'icon' => '🏭',
         'label' => 'High Bay Light',
-        'val' => 'High bay lights suspended from a tall ceiling, illuminating below',
+        'val' => 'High bay lights suspended from tall ceiling, illuminating below'.$lightUsage,
         'keywords' => ['high bay', 'warehouse'],
         'backgrounds' => [
             ['label' => '🏭 Factory Floor', 'val' => 'Industrial factory floor lit by high bay lights from a tall ceiling'],
@@ -132,9 +166,10 @@ return [
     ],
     [
         'id' => 'Street Light',
+        'category' => $lightsCategory,
         'icon' => '🌃',
         'label' => 'Street Light',
-        'val' => 'Street lights mounted on poles, illuminating the road at night',
+        'val' => 'Street lights on poles illuminating the road at night'.$lightUsage,
         'keywords' => ['street', 'pole light'],
         'backgrounds' => [
             ['label' => '🌃 City Street', 'val' => 'City street at night illuminated by rows of street lights'],
@@ -145,24 +180,47 @@ return [
         ],
     ],
     [
+        'id' => 'Focus Light',
+        'category' => $lightsCategory,
+        'icon' => '🔦',
+        'label' => 'Focus Light',
+        'val' => 'Adjustable focus light with narrow beam highlighting the target object'.$lightUsage,
+        'keywords' => ['focus light', 'focus lamp', 'beam light', 'adjustable spotlight', 'track focus'],
+        'backgrounds' => [
+            ['label' => 'Retail Store', 'val' => 'Modern retail store with focus lights beaming onto highlighted products on shelves'],
+            ['label' => 'Showroom', 'val' => 'Vehicle showroom with focus lights sharply illuminating the display model'],
+            ['label' => 'Art Gallery', 'val' => 'Art gallery wall with focus lights precisely lighting framed artwork'],
+            ['label' => 'Jewelry Counter', 'val' => 'Jewelry counter with focus lights creating bright pools on display pieces'],
+            ['label' => 'Supermarket Shelf', 'val' => 'Supermarket aisle with focus lights drawing attention to products on shelf'],
+            ['label' => 'Museum Exhibit', 'val' => 'Museum exhibit with focus lights highlighting artifacts on display'],
+            ['label' => 'Living Accent Wall', 'val' => 'Living room with focus light accenting a feature wall or decor piece at night'],
+            ['label' => 'Boutique Window', 'val' => 'Fashion boutique window display lit by narrow focus light beams'],
+        ],
+    ],
+    [
         'id' => 'Spotlight / Track',
+        'category' => $lightsCategory,
         'icon' => '🎯',
         'label' => 'Spotlight / Track Light',
-        'val' => 'Spotlights and track lights highlighting objects on display',
+        'val' => 'Ceiling track spotlight switched ON, directional beam on display product'.$lightUsage,
         'keywords' => ['spotlight', 'track light'],
         'backgrounds' => [
-            ['label' => '🖼️ Art Gallery', 'val' => 'Art gallery with spotlights highlighting framed artworks'],
-            ['label' => '🛍️ Retail Store', 'val' => 'Modern retail store with track lights highlighting products'],
-            ['label' => '🏛️ Museum', 'val' => 'Museum exhibit lit by focused spotlights'],
-            ['label' => '🚗 Showroom', 'val' => 'Car showroom with spotlights highlighting a vehicle'],
-            ['label' => '💍 Jewelry Display', 'val' => 'Jewelry display case lit by bright focused spotlights'],
+            ['label' => 'Retail Store', 'val' => 'Modern retail store with track spotlights highlighting products on display'],
+            ['label' => 'Showroom', 'val' => 'Car showroom with ceiling spotlights highlighting the vehicle'],
+            ['label' => 'Art Gallery', 'val' => 'Art gallery with spotlights highlighting framed artworks on the wall'],
+            ['label' => 'Jewelry Display', 'val' => 'Jewelry display case lit by bright focused spotlights'],
+            ['label' => 'Museum Exhibit', 'val' => 'Museum exhibit lit by focused ceiling spotlights'],
+            ['label' => 'Supermarket Aisle', 'val' => 'Supermarket aisle with track spotlights on packaged goods'],
+            ['label' => 'Furniture Showroom', 'val' => 'Furniture showroom with spotlights on featured sofa set'],
+            ['label' => 'Electronics Store', 'val' => 'Electronics store with spotlights on display phones and laptops'],
         ],
     ],
     [
         'id' => 'Garden / Landscape',
+        'category' => $lightsCategory,
         'icon' => '🪴',
         'label' => 'Garden / Landscape Light',
-        'val' => 'Landscape lights placed along the ground, glowing softly',
+        'val' => 'Landscape ground lights glowing along paths and features'.$lightUsage,
         'keywords' => ['landscape', 'garden light'],
         'backgrounds' => [
             ['label' => '🪴 Garden Path', 'val' => 'Garden pathway at night lined with glowing landscape lights'],
@@ -174,9 +232,10 @@ return [
     ],
     [
         'id' => 'Pool / Underwater',
+        'category' => $lightsCategory,
         'icon' => '🏊',
         'label' => 'Pool / Underwater Light',
-        'val' => 'Underwater lights glowing beneath the water surface',
+        'val' => 'Underwater pool lights glowing beneath the water surface'.$lightUsage,
         'keywords' => ['pool', 'underwater'],
         'backgrounds' => [
             ['label' => '🏊 Swimming Pool', 'val' => 'Swimming pool at night glowing with underwater lights'],
@@ -187,9 +246,10 @@ return [
     ],
     [
         'id' => 'Chandelier',
+        'category' => $lightsCategory,
         'icon' => '💎',
         'label' => 'Chandelier',
-        'val' => 'An elegant chandelier hanging and glowing from the ceiling',
+        'val' => 'Elegant chandelier hanging from ceiling, switched ON'.$lightUsage,
         'keywords' => ['chandelier'],
         'backgrounds' => [
             ['label' => '🎉 Banquet Hall', 'val' => 'Grand banquet hall with a glowing chandelier overhead'],
@@ -201,9 +261,10 @@ return [
     ],
     [
         'id' => 'Table / Desk Lamp',
+        'category' => $lightsCategory,
         'icon' => '🛋️',
         'label' => 'Table / Desk Lamp',
-        'val' => 'A table lamp switched on, casting a warm pool of light',
+        'val' => 'Table or desk lamp switched ON, warm pool of light on surface'.$lightUsage,
         'keywords' => ['table lamp', 'desk lamp'],
         'backgrounds' => [
             ['label' => '📚 Study Desk', 'val' => 'Study desk at night with a glowing table lamp'],
@@ -214,9 +275,10 @@ return [
     ],
     [
         'id' => 'Emergency / Exit',
+        'category' => $lightsCategory,
         'icon' => '🚪',
         'label' => 'Emergency / Exit Light',
-        'val' => 'Emergency exit lights glowing along the route',
+        'val' => 'Emergency exit lights glowing along the escape route'.$lightUsage,
         'keywords' => ['emergency', 'exit light'],
         'backgrounds' => [
             ['label' => '🚪 Corridor', 'val' => 'Building corridor with glowing emergency exit lights'],
@@ -225,4 +287,235 @@ return [
             ['label' => '🅿️ Parking Garage', 'val' => 'Underground parking garage lit by emergency lights'],
         ],
     ],
+
+    // ── Switches & controls ──────────────────────────────────────────────
+    [
+        'id' => 'Modular 1-Way Switch',
+        'category' => $switchesCategory,
+        'icon' => '🔘',
+        'label' => 'Modular 1-Way Switch',
+        'val' => 'Modular 1-way wall switch on white plate beside room entrance, rocker in ON position, ceiling or wall lights visibly glowing'.$switchUsage,
+        'keywords' => ['switch', '1-way', 'one way', 'modular', 'wall switch'],
+        'backgrounds' => [
+            ['label' => '🛋️ Living Room', 'val' => 'Modern living room with modular wall switch beside the door, lights glowing ON'],
+            ['label' => '🛏️ Bedroom', 'val' => 'Cozy bedroom entrance with modular switch ON and warm ceiling light glowing'],
+            ['label' => '🍳 Kitchen', 'val' => 'Clean kitchen with modular switch plate on tiled wall, under-cabinet lights ON'],
+            ['label' => '💼 Office Room', 'val' => 'Office room with modular switch at entry, panel lights switched ON'],
+            ['label' => '🚪 Main Entrance', 'val' => 'Home main entrance foyer with modular switch turning hallway lights ON'],
+        ],
+    ],
+    [
+        'id' => '2-Way Staircase Switch',
+        'category' => $switchesCategory,
+        'icon' => '🔀',
+        'label' => '2-Way / Staircase Switch',
+        'val' => 'Matching 2-way modular switches at top and bottom of staircase, either switch ON, stair ceiling light glowing'.$switchUsage,
+        'keywords' => ['2-way', 'two way', 'staircase', 'intermediate', 'stair switch'],
+        'backgrounds' => [
+            ['label' => '🪜 Home Staircase', 'val' => 'Home staircase with 2-way switches at top and bottom, stair lights glowing ON'],
+            ['label' => '🏢 Office Stairwell', 'val' => 'Office stairwell with 2-way switch plates on each landing, lights ON'],
+            ['label' => '🏨 Hotel Corridor Stairs', 'val' => 'Hotel stairwell with elegant 2-way switches controlling corridor lighting'],
+            ['label' => '🏬 Commercial Stairs', 'val' => 'Commercial building staircase with 2-way modular switches and bright lighting'],
+        ],
+    ],
+    [
+        'id' => 'Smart WiFi Switch',
+        'category' => $switchesCategory,
+        'icon' => '📱',
+        'label' => 'Smart WiFi / App Switch',
+        'val' => 'Smart WiFi touch wall switch on modular plate, indicator glowing ON, phone nearby showing app control, room lights ON'.$switchUsage,
+        'keywords' => ['smart', 'wifi', 'app', 'alexa', 'google home', 'iot'],
+        'backgrounds' => [
+            ['label' => '🏠 Smart Home Living', 'val' => 'Modern smart home living room with WiFi touch switch on wall and phone showing app control'],
+            ['label' => '🛏️ Smart Bedroom', 'val' => 'Bedroom with smart WiFi switch beside bed, ambient lights glowing via app control'],
+            ['label' => '🍳 Smart Kitchen', 'val' => 'Smart kitchen with WiFi switch plate and voice-controlled ceiling lights ON'],
+            ['label' => '💼 Smart Office', 'val' => 'Contemporary office with smart wall switch and automated lighting scene active'],
+        ],
+    ],
+    [
+        'id' => 'Dimmer Switch',
+        'category' => $switchesCategory,
+        'icon' => '🌗',
+        'label' => 'Dimmer Switch',
+        'val' => 'Rotary or slide dimmer switch on wall plate, set to warm mid brightness, pendant or chandelier softly glowing'.$switchUsage,
+        'keywords' => ['dimmer', 'brightness', 'dimming', 'rotary'],
+        'backgrounds' => [
+            ['label' => '🍽️ Dining Room', 'val' => 'Elegant dining room with dimmer switch lowering chandelier to warm mood lighting'],
+            ['label' => '🛋️ Living Room', 'val' => 'Living room with dimmer switch on wall and softly dimmed pendant lights'],
+            ['label' => '🛏️ Bedroom Mood', 'val' => 'Bedroom with dimmer switch creating soft romantic bedside lighting'],
+            ['label' => '🍽️ Restaurant Ambience', 'val' => 'Restaurant interior with dimmer switch controlling warm ambient table lighting'],
+        ],
+    ],
+    [
+        'id' => 'Fan Regulator Switch',
+        'category' => $switchesCategory,
+        'icon' => '🌀',
+        'label' => 'Fan Regulator Switch',
+        'val' => 'Fan speed regulator switch on modular wall plate, ceiling fan spinning with light ON'.$switchUsage,
+        'keywords' => ['fan', 'regulator', 'speed control', 'ceiling fan'],
+        'backgrounds' => [
+            ['label' => '🛋️ Living Room Fan', 'val' => 'Living room with fan regulator switch on wall and ceiling fan running with light ON'],
+            ['label' => '🛏️ Bedroom Fan', 'val' => 'Bedroom with fan regulator switch controlling quiet ceiling fan at medium speed'],
+            ['label' => '🍳 Kitchen Ventilation', 'val' => 'Kitchen with fan regulator switch controlling exhaust fan and ceiling light'],
+            ['label' => '💼 Office Fan', 'val' => 'Office room with fan regulator switch and ceiling fan providing airflow'],
+        ],
+    ],
+    [
+        'id' => 'Glass Touch Panel',
+        'category' => $switchesCategory,
+        'icon' => '👆',
+        'label' => 'Glass Touch Panel Switch',
+        'val' => 'Glass touch panel switch on modular plate with illuminated touch icons, switch ON, room ambient lights glowing'.$switchUsage,
+        'keywords' => ['touch', 'glass panel', 'capacitive', 'premium switch'],
+        'backgrounds' => [
+            ['label' => '🏠 Modern Apartment', 'val' => 'Luxury apartment with glass touch panel switch glowing on white wall, lights ON'],
+            ['label' => '🏨 Hotel Room', 'val' => 'Hotel room with sleek glass touch switch panel beside the bed'],
+            ['label' => '🛋️ Designer Living', 'val' => 'Designer living room with multi-gang glass touch panel controlling scene lighting'],
+            ['label' => '🍳 Premium Kitchen', 'val' => 'Premium modular kitchen with glass touch switch panel on backsplash wall'],
+        ],
+    ],
+    [
+        'id' => 'Bell Push Switch',
+        'category' => $switchesCategory,
+        'icon' => '🔔',
+        'label' => 'Bell Push / Doorbell Switch',
+        'val' => 'Bell push switch mounted on entrance gate or door frame, porch or hallway light ON nearby'.$switchUsage,
+        'keywords' => ['bell', 'doorbell', 'bell push', 'chime', 'door'],
+        'backgrounds' => [
+            ['label' => '🏡 Home Main Gate', 'val' => 'Residential home main gate with bell push switch on pillar, porch light ON'],
+            ['label' => '🚪 Apartment Door', 'val' => 'Apartment entrance door with modern bell push switch and hallway light glowing'],
+            ['label' => '🏢 Office Reception', 'val' => 'Office reception entrance with bell push switch and welcome area lit'],
+            ['label' => '🏬 Shop Front', 'val' => 'Retail shop front door with bell push switch and display window lit inside'],
+        ],
+    ],
+    [
+        'id' => 'PIR Motion Switch',
+        'category' => $switchesCategory,
+        'icon' => '👁️',
+        'label' => 'PIR Motion Sensor Switch',
+        'val' => 'PIR motion sensor switch on wall or ceiling, auto ON, corridor or washroom lights glowing'.$switchUsage,
+        'keywords' => ['pir', 'motion', 'sensor', 'auto', 'automatic'],
+        'backgrounds' => [
+            ['label' => '🚪 Corridor', 'val' => 'Building corridor with PIR motion sensor switch and lights auto ON as someone walks'],
+            ['label' => '🚿 Washroom', 'val' => 'Modern washroom with PIR sensor switch and lights automatically glowing'],
+            ['label' => '🪜 Staircase', 'val' => 'Staircase landing with PIR motion switch activating step lights'],
+            ['label' => '🅿️ Parking Basement', 'val' => 'Underground parking with PIR sensor switches and rows of lights switching ON'],
+        ],
+    ],
+    [
+        'id' => 'Socket Switch Combo',
+        'category' => $switchesCategory,
+        'icon' => '🔌',
+        'label' => 'Socket + Switch Combo Plate',
+        'val' => 'Combined socket and switch on one modular plate on kitchen or bedroom wall, switch ON, nearby lights glowing'.$switchUsage,
+        'keywords' => ['socket', 'combo', 'plug', 'switch socket', 'combined'],
+        'backgrounds' => [
+            ['label' => '🍳 Kitchen Counter', 'val' => 'Kitchen backsplash with socket and switch combo plate, counter lights ON'],
+            ['label' => '🚿 Washroom Vanity', 'val' => 'Washroom vanity wall with socket-switch combo plate and mirror lights glowing'],
+            ['label' => '🛏️ Bedside Wall', 'val' => 'Bedroom bedside wall with socket and switch combo plate, reading light ON'],
+            ['label' => '💼 Office Workstation', 'val' => 'Office workstation wall with socket-switch combo and desk area lit'],
+        ],
+    ],
+    [
+        'id' => 'MCB Distribution Panel',
+        'category' => $switchesCategory,
+        'icon' => '⚡',
+        'label' => 'MCB / Distribution Panel',
+        'val' => 'MCB distribution panel with labeled breakers in ON position, utility room or factory lighting active'.$switchUsage,
+        'keywords' => ['mcb', 'distribution', 'breaker', 'panel board', 'db box'],
+        'backgrounds' => [
+            ['label' => '🏠 Home DB Box', 'val' => 'Residential electrical DB box with MCB switches neatly labeled, utility room lit'],
+            ['label' => '🏭 Factory Panel', 'val' => 'Industrial factory electrical panel with MCB switches and indicator lights ON'],
+            ['label' => '🏬 Commercial Panel Room', 'val' => 'Commercial building electrical room with distribution panel and circuit breakers'],
+            ['label' => '🏢 Office Electrical Room', 'val' => 'Office electrical room with open MCB distribution board and safety lighting'],
+        ],
+    ],
+    [
+        'id' => 'Remote Wireless Switch',
+        'category' => $switchesCategory,
+        'icon' => '📡',
+        'label' => 'Remote / Wireless Switch',
+        'val' => 'Handheld wireless remote switching ceiling or pendant lights ON in living room or patio'.$switchUsage,
+        'keywords' => ['remote', 'wireless', 'rf', 'handheld'],
+        'backgrounds' => [
+            ['label' => '🛋️ Living Room Remote', 'val' => 'Living room with person using wireless remote switch, ceiling lights turning ON'],
+            ['label' => '🛏️ Bedroom Remote', 'val' => 'Bedroom with bedside wireless remote switch controlling room lights without getting up'],
+            ['label' => '🍽️ Dining Remote', 'val' => 'Dining area with wireless remote dimming pendant lights over the table'],
+            ['label' => '🏡 Outdoor Patio', 'val' => 'Outdoor patio with wireless remote switch controlling garden and string lights'],
+        ],
+    ],
+    [
+        'id' => 'Hotel Card Key Switch',
+        'category' => $switchesCategory,
+        'icon' => '🏨',
+        'label' => 'Hotel Card Key Switch',
+        'val' => 'Hotel card-key energy saver switch slot beside door with key card inserted, room lights and AC powered ON'.$switchUsage,
+        'keywords' => ['hotel', 'card key', 'energy saver', 'key card'],
+        'backgrounds' => [
+            ['label' => '🏨 Hotel Room Entry', 'val' => 'Hotel room entrance with card key switch inserted, room lights and AC powered ON'],
+            ['label' => '🛏️ Boutique Hotel', 'val' => 'Boutique hotel room with elegant card key switch slot and warm ambient lighting ON'],
+            ['label' => '🏢 Serviced Apartment', 'val' => 'Serviced apartment foyer with card key energy saver switch activating lights'],
+        ],
+    ],
+    [
+        'id' => 'Industrial Rocker Switch',
+        'category' => $switchesCategory,
+        'icon' => '🏭',
+        'label' => 'Industrial Rocker Switch',
+        'val' => 'Heavy-duty industrial rocker switch on wall, workshop or garage overhead lights brightly ON'.$switchUsage,
+        'keywords' => ['industrial', 'rocker', 'heavy duty', 'workshop'],
+        'backgrounds' => [
+            ['label' => '🏭 Workshop', 'val' => 'Industrial workshop with heavy-duty rocker switch on wall, bright work lights ON'],
+            ['label' => '🅿️ Garage', 'val' => 'Home garage with industrial rocker switch controlling overhead tube lights'],
+            ['label' => '🏗️ Construction Site Office', 'val' => 'Site office cabin with rugged rocker switch and fluorescent lights glowing'],
+            ['label' => '📦 Warehouse Bay', 'val' => 'Warehouse loading bay with industrial rocker switch activating flood lighting'],
+        ],
+    ],
+    [
+        'id' => 'Multi-Gang Switch Plate',
+        'category' => $switchesCategory,
+        'icon' => '🎛️',
+        'label' => 'Multi-Gang Switch Plate',
+        'val' => 'Multi-gang modular switch plate with several rockers, multiple zone lights ON in open living-dining space'.$switchUsage,
+        'keywords' => ['multi gang', '4 gang', '6 gang', '8 gang', 'modular plate'],
+        'backgrounds' => [
+            ['label' => '🛋️ Living + Dining', 'val' => 'Open living-dining space with multi-gang switch plate controlling separate light zones ON'],
+            ['label' => '🏢 Conference Room', 'val' => 'Conference room entry with multi-gang switch plate controlling projector, panel and accent lights'],
+            ['label' => '🍳 Modular Kitchen', 'val' => 'Modular kitchen with multi-gang switch plate controlling counter, ceiling and under-cabinet lights'],
+            ['label' => '🏨 Hotel Suite', 'val' => 'Hotel suite entrance with multi-gang switch plate controlling bedroom, bathroom and corridor lights'],
+        ],
+    ],
+    [
+        'id' => 'Timer / Schedule Switch',
+        'category' => $switchesCategory,
+        'icon' => '⏰',
+        'label' => 'Timer / Schedule Switch',
+        'val' => 'Programmable timer switch on wall automatically turning garden or facade lights ON at dusk'.$switchUsage,
+        'keywords' => ['timer', 'schedule', 'programmable', 'astro', 'automatic'],
+        'backgrounds' => [
+            ['label' => '🏡 Garden Auto Lights', 'val' => 'Home garden at dusk with timer switch activating landscape lights automatically'],
+            ['label' => '🏢 Building Facade', 'val' => 'Commercial building facade with timer-controlled flood lights switching ON at night'],
+            ['label' => '🅿️ Parking Security', 'val' => 'Parking area with timer switch controlling security pole lights at scheduled hours'],
+            ['label' => '🪧 Signage Timer', 'val' => 'Shop signage at night lit by timer switch turning display lights ON automatically'],
+        ],
+    ],
 ];
+
+usort($options, function ($a, $b) use ($usageSortOrder) {
+    $sortA = $usageSortOrder[$a['id'] ?? ''] ?? 999;
+    $sortB = $usageSortOrder[$b['id'] ?? ''] ?? 999;
+    return $sortA <=> $sortB;
+});
+
+foreach ($options as &$opt) {
+    if (empty($opt['backgrounds'])) {
+        continue;
+    }
+    foreach ($opt['backgrounds'] as &$bg) {
+        $bg['label'] = trim(preg_replace('/^[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]+\s*/u', '', $bg['label'] ?? ''));
+    }
+    unset($bg);
+}
+unset($opt);
+
+return $options;

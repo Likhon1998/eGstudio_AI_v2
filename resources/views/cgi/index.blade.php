@@ -280,7 +280,9 @@
                                     mergeVideoStatus: '{{ $gen->merged_video_url ? 'completed' : ($gen->merge_video_status ?? 'pending') }}',
                                     videoErrorMessage: @js($gen->video_error_message ?? ''),
 
-                                    openModal: null, isEditing: false, isSaving: false, isTriggering: false, isVideoTriggering: false,
+                                    openModal: null, showProductReferenceImage: false,
+                                    productReferenceImageUrl: @js($gen->product_image ? (str_starts_with($gen->product_image, 'http') ? $gen->product_image : asset('storage/' . $gen->product_image)) : null),
+                                    isEditing: false, isSaving: false, isTriggering: false, isVideoTriggering: false,
                                     liveImagePrompt: @js($gen->image_prompt),
 
                                     liveVideoPrompt: @js($gen->video_prompt),
@@ -505,6 +507,7 @@
 
                                     closeModal() {
                                         this.openModal = null;
+                                        this.showProductReferenceImage = false;
                                         this.captionLangPickerOpen = false;
                                         document.querySelectorAll('video').forEach(v => v.pause());
                                     },
@@ -763,7 +766,7 @@
                                                                     'bg-white text-black border-transparent hover:bg-blue-600 hover:text-white': !imageUrl && imageStatus !== 'making' && hasImageCredits,
                                                                     'bg-white/5 border-white/10 text-gray-600 cursor-not-allowed': !imageUrl && imageStatus !== 'making' && !hasImageCredits
                                                                 }">
-                                                            <span x-text="(imageStatus==='making' && !imageUrl) ? 'RENDERING' : (imageUrl ? 'View Pic' : (hasImageCredits ? 'Make Pic' : '0 Cr'))"></span>
+                                                            <span x-text="(imageStatus==='making' && !imageUrl) ? 'RENDERING' : (imageUrl ? 'View Image' : (hasImageCredits ? 'Make Image' : '0 Cr'))"></span>
                                                         </button>
                                                     @endcan
                                                     
@@ -777,7 +780,7 @@
                                                             @click="if(!hasBrandingImageCredits) { $dispatch('notify', {message: 'Insufficient Credits', type: 'error'}); return; }; brandingModal = true; activeGenId = '{{ $gen->id }}'; activeImageUrl = imageUrl; brandingTarget = 'image';"
                                                             class="h-8 px-2 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-600 hover:text-white transition-all text-[8px] font-black uppercase tracking-widest shadow-lg flex items-center gap-1">
                                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                                            <span>Logo</span>
+                                                            <span>Add Logo</span>
                                                         </button>
                                                     </template>
 
@@ -849,7 +852,7 @@
                                                     <template x-if="imageUrl !== '' && (mergedImageUrl !== '' || mergeStatus === 'completed')">
                                                         <button @click="switchModal('mergedPreview')"
                                                             class="h-8 px-2 bg-orange-500/10 border border-orange-500/20 text-orange-400 hover:bg-orange-600 hover:text-white rounded transition-all uppercase tracking-widest text-[8px] font-black shadow-lg">
-                                                            View Merged
+                                                            View Merged Image
                                                         </button>
                                                     </template>
 
@@ -1002,7 +1005,8 @@
                                         <template x-teleport="body">
 
                                             <div x-show="openModal"
-                                                class="fixed inset-0 z-[999] flex items-center justify-center p-4 sm:p-6 bg-black/95 backdrop-blur-md"
+                                                class="fixed inset-0 z-[999] flex justify-center p-4 sm:p-6 bg-black/95 backdrop-blur-md"
+                                                :class="['image','video','audio'].includes(openModal) ? 'items-start overflow-y-auto py-6 sm:py-10' : 'items-center'"
                                                 x-cloak>
 
                                                 {{-- ========================================================
@@ -1041,122 +1045,107 @@
                                                 {{-- DETAILS MODAL (New User Settings View) --}}
 
                                                 <div x-show="openModal === 'details'"
-                                                    class="bg-[#0a0a0a] border border-white/10 w-full max-w-3xl rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200"
-                                                    @click.away="closeModal()">
+                                                    class="bg-[#0a0a0a] border border-white/10 w-full max-w-4xl rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 relative"
+                                                    @click.away="if (!showProductReferenceImage) closeModal()">
 
+                                                    @php
+                                                        $detailBusiness = \App\Support\CgiBusinessPresets::get($gen->business_type ?? 'lighting') ?? [];
+                                                        $detailBusinessLabel = ($detailBusiness['icon'] ?? '') . ' ' . ($detailBusiness['label'] ?? ucfirst($gen->business_type ?? 'lighting'));
+                                                        $detailProductImageUrl = $gen->product_image
+                                                            ? (str_starts_with($gen->product_image, 'http')
+                                                                ? $gen->product_image
+                                                                : asset('storage/' . $gen->product_image))
+                                                            : null;
+                                                    @endphp
 
-                                                    <div
-                                                        class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-
-
-                                                        <h3
-                                                            class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">
-                                                            Directive Configuration</h3>
+                                                    <div class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                                                        <div>
+                                                            <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">
+                                                                Directive Configuration</h3>
+                                                            <p class="text-[9px] font-bold text-blue-400/80 uppercase tracking-widest mt-1">{{ trim($detailBusinessLabel) }}</p>
+                                                        </div>
                                                         <button @click="closeModal()"
                                                             class="text-gray-500 hover:text-white text-lg">✕</button>
-
                                                     </div>
 
-                                                    <div class="p-8 grid grid-cols-1 sm:grid-cols-2 gap-8 bg-black/40">
+                                                    <div class="p-6 sm:p-8 space-y-6 bg-black/40 max-h-[75vh] overflow-y-auto custom-scrollbar">
 
+                                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                                            <div>
+                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">01. Product Identity</p>
+                                                                <p class="text-sm font-black text-white">{{ $gen->product_name }}</p>
+                                                            </div>
 
-                                                        <div>
-                                                            <p
-                                                                class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">
-                                                                01. Product Identity</p>
-                                                            <p class="text-sm font-black text-white">
-                                                                {{ $gen->product_name }}</p>
-
-                                                        </div>
-
-                                                        <div>
-
-                                                            <p
-                                                                class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">
-                                                                02. Marketing Angle</p>
-                                                            <p class="text-xs font-bold text-gray-300 italic">
-                                                                {{ $gen->marketing_angle }}</p>
-
-                                                        </div>
-
-                                                        <div class="sm:col-span-2">
-
-                                                            <p
-                                                                class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-2">
-                                                                03. Visual Props</p>
-                                                            <div class="flex flex-wrap gap-1.5">
-
-                                                                @foreach(explode(',', $gen->visual_prop) as $prop)
-                                                                    @if(trim($prop))
-
-                                                                        <span
-                                                                            class="px-2 py-1 bg-white/5 border border-white/10 rounded text-[9px] font-bold text-gray-300 uppercase">{{ trim($prop) }}</span>
-                                                                    @endif
-                                                                @endforeach
-
-
+                                                            <div>
+                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-2">02. Product Reference</p>
+                                                                @if($detailProductImageUrl)
+                                                                    <button type="button" @click="showProductReferenceImage = true"
+                                                                       class="inline-block group rounded-xl overflow-hidden border border-white/10 bg-black/50 hover:border-blue-500/40 transition-all max-w-[200px] text-left">
+                                                                        <img src="{{ $detailProductImageUrl }}" alt="Product reference for {{ $gen->product_name }}"
+                                                                             class="w-full h-auto max-h-40 object-contain p-2 group-hover:scale-[1.02] transition-transform">
+                                                                        <p class="px-2 py-1.5 text-[8px] font-black uppercase tracking-widest text-gray-500 border-t border-white/5 group-hover:text-blue-400 text-center">View full size</p>
+                                                                    </button>
+                                                                @else
+                                                                    <p class="text-xs font-bold text-gray-500 italic">No reference image saved</p>
+                                                                @endif
                                                             </div>
                                                         </div>
 
-
                                                         <div>
-
-
-                                                            <p
-                                                                class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">
-                                                                04. Atmosphere</p>
-                                                            <p class="text-xs font-bold text-gray-300">
-                                                                {{ $gen->atmosphere }}</p>
-
+                                                            <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">03. Marketing Angle</p>
+                                                            <p class="text-xs font-bold text-gray-300 italic leading-relaxed">{{ $gen->marketing_angle }}</p>
                                                         </div>
 
                                                         <div>
-
-                                                            <p
-                                                                class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">
-                                                                05. Camera Motion</p>
-                                                            <p class="text-xs font-bold text-gray-300">
-                                                                {{ $gen->camera_motion }}</p>
-
+                                                            <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">04. Product Usage</p>
+                                                            <p class="text-xs font-bold text-gray-300 leading-relaxed bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2.5">{{ $gen->visual_prop }}</p>
                                                         </div>
 
-                                                        <div>
-
-                                                            <p
-                                                                class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">
-                                                                06. Composition</p>
-                                                            <p class="text-xs font-bold text-gray-300">
-                                                                {{ $gen->composition }}</p>
-
+                                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                                            <div>
+                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">05. Scene Background</p>
+                                                                <p class="text-xs font-bold text-gray-300 leading-relaxed">{{ $gen->atmosphere }}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">06. Camera Style</p>
+                                                                <p class="text-xs font-bold text-gray-300 leading-relaxed">{{ $gen->camera_motion }}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">07. Product Positioning</p>
+                                                                <p class="text-xs font-bold text-gray-300 leading-relaxed">{{ $gen->composition }}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">08. Lighting &amp; Color</p>
+                                                                <p class="text-xs font-bold text-gray-300 leading-relaxed">{{ $gen->lighting_style }}</p>
+                                                            </div>
                                                         </div>
-
-                                                        <div>
-
-                                                            <p
-                                                                class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">
-                                                                07. Lighting Style</p>
-                                                            <p class="text-xs font-bold text-gray-300">
-                                                                {{ $gen->lighting_style }}</p>
-
-                                                        </div>
-
                                                     </div>
 
-                                                    <div
-                                                        class="px-8 py-5 border-t border-white/5 bg-white/[0.01] flex justify-end">
-
+                                                    <div class="px-6 sm:px-8 py-5 border-t border-white/5 bg-white/[0.01] flex justify-end">
                                                         <button @click="closeModal()"
-                                                            class="px-5 py-2.5 bg-gray-800 text-white rounded text-[10px] font-black uppercase tracking-widest hover:bg-gray-700 transition-colors">Close
-                                                            View</button>
+                                                            class="px-5 py-2.5 bg-gray-800 text-white rounded text-[10px] font-black uppercase tracking-widest hover:bg-gray-700 transition-colors">Close View</button>
+                                                    </div>
 
-
+                                                    {{-- Product reference lightbox --}}
+                                                    <div x-show="showProductReferenceImage && productReferenceImageUrl" x-cloak
+                                                         class="fixed inset-0 z-[1000] flex flex-col items-center justify-center p-4 sm:p-8 bg-black/95 backdrop-blur-md"
+                                                         @keydown.escape.window="showProductReferenceImage = false"
+                                                         @click.self="showProductReferenceImage = false">
+                                                        <button type="button" @click="showProductReferenceImage = false"
+                                                            class="absolute top-4 right-4 sm:top-6 sm:right-6 text-white text-[10px] font-black uppercase tracking-[0.2em] bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full transition-all">
+                                                            Close ✕
+                                                        </button>
+                                                        <img :src="productReferenceImageUrl" alt="Product reference"
+                                                             class="w-full max-w-4xl max-h-[80vh] object-contain rounded-xl border border-white/10 shadow-2xl bg-black"
+                                                             @click.stop>
+                                                        <p class="mt-4 text-[9px] font-black uppercase tracking-widest text-gray-500">Product Reference · {{ $gen->product_name }}</p>
                                                     </div>
                                                 </div>
 
 
 
                                                 <div x-show="['image','video','audio'].includes(openModal)"
-                                                    class="bg-[#0a0a0a] border border-white/10 w-full max-w-xl rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+                                                    class="bg-[#0a0a0a] border border-white/10 w-full max-w-3xl rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 my-auto">
 
                                                     <div
                                                         class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
@@ -1169,24 +1158,36 @@
                                                     </div>
 
 
-                                                    <div class="p-8">
+                                                    <div class="p-6 sm:p-8">
                                                         <div x-show="!isEditing"
-                                                            class="bg-black p-5 rounded border border-white/5 font-mono text-xs text-gray-400 max-h-[40vh] overflow-y-auto whitespace-pre-wrap leading-relaxed shadow-inner"
+                                                            class="bg-black p-5 sm:p-6 rounded-xl border border-white/5 font-mono text-xs sm:text-sm text-gray-300 whitespace-pre-wrap break-words leading-relaxed shadow-inner"
                                                             x-text="openModal==='image' ? liveImagePrompt : (openModal==='video' ? liveVideoPrompt : liveAudioPrompt)">
                                                         </div>
                                                         <div x-show="isEditing">
 
                                                             <template x-if="openModal==='image'"><textarea
                                                                     x-model="inputImage"
-                                                                    class="w-full h-48 bg-black border border-white/10 rounded p-5 text-white font-mono text-xs focus:ring-1 focus:ring-blue-500 outline-none transition-all"></textarea></template>
+                                                                    x-ref="promptEditImage"
+                                                                    rows="1"
+                                                                    @input="window.cgiGrowField($refs.promptEditImage)"
+                                                                    x-init="$nextTick(() => window.cgiGrowField($refs.promptEditImage))"
+                                                                    class="w-full min-h-[10rem] bg-black border border-white/10 rounded-xl p-5 text-white font-mono text-xs sm:text-sm focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none overflow-hidden whitespace-pre-wrap break-words leading-relaxed"></textarea></template>
 
                                                             <template x-if="openModal==='video'"><textarea
                                                                     x-model="inputVideo"
-                                                                    class="w-full h-48 bg-black border border-white/10 rounded p-5 text-white font-mono text-xs focus:ring-1 focus:ring-blue-500 outline-none transition-all"></textarea></template>
+                                                                    x-ref="promptEditVideo"
+                                                                    rows="1"
+                                                                    @input="window.cgiGrowField($refs.promptEditVideo)"
+                                                                    x-init="$nextTick(() => window.cgiGrowField($refs.promptEditVideo))"
+                                                                    class="w-full min-h-[10rem] bg-black border border-white/10 rounded-xl p-5 text-white font-mono text-xs sm:text-sm focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none overflow-hidden whitespace-pre-wrap break-words leading-relaxed"></textarea></template>
 
                                                             <template x-if="openModal==='audio'"><textarea
                                                                     x-model="inputAudio"
-                                                                    class="w-full h-48 bg-black border border-white/10 rounded p-5 text-white font-mono text-xs focus:ring-1 focus:ring-blue-500 outline-none transition-all"></textarea></template>
+                                                                    x-ref="promptEditAudio"
+                                                                    rows="1"
+                                                                    @input="window.cgiGrowField($refs.promptEditAudio)"
+                                                                    x-init="$nextTick(() => window.cgiGrowField($refs.promptEditAudio))"
+                                                                    class="w-full min-h-[10rem] bg-black border border-white/10 rounded-xl p-5 text-white font-mono text-xs sm:text-sm focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none overflow-hidden whitespace-pre-wrap break-words leading-relaxed"></textarea></template>
 
 
                                                         </div>
@@ -1713,6 +1714,18 @@
                         </tbody>
                     </table>
                 </div>
+
+                @if($generations->hasPages())
+                    <div class="px-4 sm:px-6 py-5 border-t border-white/5">
+                        {{ $generations->links('vendor.pagination.gallery') }}
+                    </div>
+                @elseif($generations->total() > 0)
+                    <div class="px-4 sm:px-6 py-4 border-t border-white/5">
+                        <p class="text-center text-[9px] font-bold text-gray-600 uppercase tracking-widest">
+                            Showing {{ $generations->total() }} {{ $generations->total() === 1 ? 'directive' : 'directives' }}
+                        </p>
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -1973,6 +1986,14 @@
 
         @include('partials.merge-template-modal')
     </div>
+
+    <script>
+        window.cgiGrowField = window.cgiGrowField || function (el) {
+            if (!el) return;
+            el.style.height = 'auto';
+            el.style.height = Math.max(el.scrollHeight, 160) + 'px';
+        };
+    </script>
 
     {{-- STUDIO DOCUMENTATION & STYLESHEET --}}
     <style>
