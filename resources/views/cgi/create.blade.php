@@ -356,19 +356,20 @@
                     x-init="$nextTick(() => { const b = document.getElementById('cgi_business_type')?.value; if (b) business = b; })"
                     @cgi-business-changed.window="business = $event.detail.business; val = '';"
                     @cgi-autofill-data.window="val = $event.detail.product_name || val">
-                        <div class="flex items-center gap-2 mb-2 relative group w-fit">
+                        <div class="flex items-center gap-2 mb-2">
                             <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">01.
-                                <span x-text="preset.step01_label || 'What are you selling?'"></span></label>
-                            <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <div
-                                class="absolute left-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-gray-800 border border-gray-700 text-[10px] text-gray-300 rounded-xl shadow-2xl z-[60] leading-relaxed">
-                                <strong class="text-white block mb-1">Guide:</strong>
-                                <span x-text="preset.step01_guide || 'Mention the specific product name. Adding the material helps the AI create realistic textures.'"></span>
+                                <span x-text="preset.step01_label || 'Your product name'"></span></label>
+                            <div class="cgi-tip-anchor shrink-0">
+                                <span class="cursor-help text-gray-500 hover:text-blue-400 transition-colors inline-flex" tabindex="0" role="button" aria-label="Help">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </span>
+                                <div class="cgi-step-tip">
+                                    <strong class="text-white block mb-1">What this means:</strong>
+                                    <span x-text="preset.step01_guide || 'Type the exact name of what you sell — the same item shown in your photo (Step 02). Scenario: ceiling panel or wall switch name your customer would recognize.'"></span>
+                                </div>
                             </div>
                         </div>
                         <x-cgi-text-field
@@ -400,6 +401,8 @@
 
                     {{-- 02. Search & Select Product Upload (RIGHT SIDE) --}}
                     <div x-data="{ 
+                        business: localStorage.getItem('cgi_business') || 'lighting',
+                        get preset() { return window.cgiBusinessPresets?.[this.business] || {}; },
                         searchQuery: '',
                         imageUrl: null, 
                         selectedAssetPath: null,
@@ -424,7 +427,9 @@
                             document.getElementById('product_image').value = ''; // Clear file input
                             this.dropdownOpen = false; // Close dropdown
                         }
-                    }" @cgi-autofill-data.window="
+                    }"
+                    @cgi-business-changed.window="business = $event.detail.business;"
+                    @cgi-autofill-data.window="
                         if ($event.detail._imagePreview) {
                             imageUrl = $event.detail._imagePreview;
                             selectedAssetPath = $event.detail._assetPath;
@@ -438,13 +443,17 @@
                     ">
                         <input type="hidden" name="selected_asset_path" :value="selectedAssetPath">
 
-                        <div class="flex items-center gap-1.5 mb-1.5 relative group w-fit">
-                            <label class="block text-blue-400 text-[9px] font-bold tracking-[0.2em] uppercase">02. Product Reference</label>
-                            <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            </div>
-                            <div class="absolute left-0 md:left-auto md:right-0 top-full mt-1 hidden group-hover:block w-64 p-2.5 bg-gray-800 border border-gray-700 text-[9px] text-gray-300 rounded-xl shadow-2xl z-[60] leading-relaxed">
-                                <strong class="text-white block mb-0.5">Guide:</strong> Select an existing product from your library, or click the + button to upload a new one. New uploads auto-save to your library.
+                        <div class="flex items-center gap-1.5 mb-1.5">
+                            <label class="block text-blue-400 text-[9px] font-bold tracking-[0.2em] uppercase">02.
+                                <span x-text="preset.step02_label || 'Your product photo'"></span></label>
+                            <div class="cgi-tip-anchor cgi-tip-anchor--left shrink-0">
+                                <span class="cursor-help text-gray-500 hover:text-blue-400 transition-colors inline-flex" tabindex="0" role="button" aria-label="Help">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                </span>
+                                <div class="cgi-step-tip">
+                                    <strong class="text-white block mb-1">What this means:</strong>
+                                    <span x-text="preset.step02_guide || 'Choose or upload the real photo of your product. The AI copies this exact item — shape, color, and branding — in the finished poster.'"></span>
+                                </div>
                             </div>
                         </div>
 
@@ -631,26 +640,27 @@
                     x-init="$nextTick(() => { const b = document.getElementById('cgi_business_type')?.value; if (b) business = b; })"
                     @cgi-business-changed.window="business = $event.detail.business; val = '';"
                     @cgi-autofill-data.window="val = $event.detail.marketing_angle || val">
-                        <div class="flex items-center gap-2 mb-2 relative group w-fit">
+                        <div class="flex items-center gap-2 mb-2">
                             <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">03.
-                                <span x-text="preset.step03_label || 'Text You Want To See !'"></span></label>
-                            <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <div
-                                class="absolute left-0 md:left-auto md:right-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-gray-800 border border-gray-700 text-[10px] text-gray-300 rounded-xl shadow-2xl z-[60] leading-relaxed">
-                                <strong class="text-white block mb-1">Guide:</strong>
-                                <span x-text="preset.step03_guide || 'Select or type words you want highlighted as bold text/graphics inside your final render.'"></span>
+                                <span x-text="preset.step03_label || 'Marketing headline'"></span></label>
+                            <div class="cgi-tip-anchor shrink-0">
+                                <span class="cursor-help text-gray-500 hover:text-blue-400 transition-colors inline-flex" tabindex="0" role="button" aria-label="Help">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </span>
+                                <div class="cgi-step-tip">
+                                    <strong class="text-white block mb-1">Guidance</strong>
+                                    <span x-text="preset.step03_guide || 'The bold selling message on your advertisement — 2 to 3 short benefit phrases. This headline sits in the poster layout, not on the product photo.'"></span>
+                                </div>
                             </div>
                         </div>
                         <x-cgi-text-field
                             name="marketing_angle"
                             model="val"
                             required
-                            x-bind:placeholder="preset.step03_placeholder || 'Type custom benefits or select below...'"
+                            x-bind:placeholder="preset.step03_placeholder || 'E.g. BRIGHT UNIFORM LIGHT · ENERGY SAVING · MODERN DESIGN'"
                         />
 
                         <p x-show="preset.step03_example" x-cloak class="mt-1.5 text-[9px] text-gray-500 italic leading-relaxed" x-text="preset.step03_example"></p>
@@ -846,19 +856,20 @@
                             $dispatch('cgi-autofill-background', { backgrounds: [], val: atmOnly });
                         }
                     ">
-                        <div class="flex items-center gap-2 mb-2 relative group w-fit">
+                        <div class="flex items-center gap-2 mb-2">
                             <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">04.
-                                <span x-text="preset.step04_label || 'How is the product used in the scene?'"></span></label>
-                            <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <div
-                                class="absolute left-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-gray-800 border border-gray-700 text-[10px] text-gray-300 rounded-xl shadow-2xl z-[60] leading-relaxed">
-                                <strong class="text-white block mb-1">Guide:</strong>
-                                <span x-text="preset.step04_guide || 'Type your own usage or pick a preset. Your choice loads matching scene backgrounds in step 05.'"></span>
+                                <span x-text="preset.step04_label || 'How it is used in real life'"></span></label>
+                            <div class="cgi-tip-anchor shrink-0">
+                                <span class="cursor-help text-gray-500 hover:text-blue-400 transition-colors inline-flex" tabindex="0" role="button" aria-label="Help">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </span>
+                                <div class="cgi-step-tip">
+                                    <strong class="text-white block mb-1">What this means:</strong>
+                                    <span x-text="preset.step04_guide || 'Where your product goes and that it is working (switched ON). Pick from the list or type your own — Step 05 will suggest matching rooms.'"></span>
+                                </div>
                             </div>
                         </div>
 
@@ -880,7 +891,7 @@
                             <button type="button" @click="open = !open"
                                 class="w-full bg-gray-800/40 border border-gray-700/80 rounded-lg p-2 flex items-center justify-between hover:border-blue-500/50 transition-all focus:ring-1 focus:ring-blue-500/50">
                                 <span class="text-[9px] font-black uppercase tracking-widest text-gray-400"
-                                    x-text="business === 'lighting' ? 'Select install & usage type' : 'Browse usage presets'"></span>
+                                    x-text="preset.step04_dropdown_label || 'Browse common examples (optional)'"></span>
                                 <svg class="w-3 h-3 text-gray-500 shrink-0 ml-1 transition-transform"
                                     :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -924,7 +935,7 @@
                         </div>
 
                         <p class="mt-2 text-[9px] text-gray-500 font-bold uppercase tracking-widest"
-                            x-text="business === 'lighting' ? 'Pick install type — Step 05 loads related scene examples in the dropdown.' : 'Type freely above, or pick a preset to load step 05 scene suggestions.'">
+                            x-text="preset.step04_helper || 'Pick an example below, or type your own above — Step 05 will suggest matching rooms.'">
                         </p>
                     </div>
 
@@ -985,19 +996,20 @@
                         @usage-changed.window="options = $event.detail.backgrounds || []; sceneOpen = false; if ($event.detail.autoVal !== undefined) val = $event.detail.autoVal; syncSceneIndex();"
                            @cgi-autofill-reset.window="val = ''; options = []; sceneOpen = false; sceneIndex = -1;"
                            @cgi-autofill-background.window="options = $event.detail.backgrounds || []; val = $event.detail.val || ''; syncSceneIndex();">
-                            <div class="flex items-center gap-2 mb-2 relative group w-fit">
+                            <div class="flex items-center gap-2 mb-2">
                                 <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">05.
-                                    <span x-text="preset.step05_label || 'Scene Background.'"></span></label>
-                                <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                </div>
-                                <div
-                                    class="absolute left-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-gray-800 border border-gray-700 text-[10px] text-gray-300 rounded-xl shadow-2xl z-[60] leading-relaxed">
-                                    <strong class="text-white block mb-1">Guide:</strong>
-                                    <span x-text="preset.step05_guide || 'Pick a suggested scene based on how the product is used (step 04), or type your own custom background below.'"></span>
+                                    <span x-text="preset.step05_label || 'Which room or place'"></span></label>
+                                <div class="cgi-tip-anchor shrink-0">
+                                    <span class="cursor-help text-gray-500 hover:text-blue-400 transition-colors inline-flex" tabindex="0" role="button" aria-label="Help">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </span>
+                                    <div class="cgi-step-tip">
+                                        <strong class="text-white block mb-1">What this means:</strong>
+                                        <span x-text="preset.step05_guide || 'The background scene — where your product is shown in real life. Pick from the dropdown after Step 04, or type your own room or place.'"></span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1050,7 +1062,7 @@
                             {{-- Hint shown until a usage is chosen in step 04 --}}
                             <p x-show="options.length === 0"
                                 class="mt-2 text-[9px] text-gray-500 font-bold uppercase tracking-widest"
-                                x-text="business === 'lighting' ? 'Complete Step 04 first — related scene examples load in the dropdown.' : 'Pick Step 04 from the dropdown below — matching rooms load in Step 05.'">
+                                x-text="preset.step05_helper || 'Fill in Step 04 first — matching room examples appear in the dropdown below.'">
                             </p>
                         </div>
 
@@ -1063,19 +1075,20 @@
                         x-init="$nextTick(() => { const b = document.getElementById('cgi_business_type')?.value; if (b) business = b; })"
                         @cgi-business-changed.window="business = $event.detail.business;"
                         @cgi-autofill-data.window="val = $event.detail.camera_motion || $event.detail.movement || $event.detail.camera || val">
-                            <div class="flex items-center gap-2 mb-2 relative group w-fit">
+                            <div class="flex items-center gap-2 mb-2">
                                 <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">06.
-                                    <span x-text="preset.step06_label || 'Camera Style.'"></span></label>
-                                <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                </div>
-                                <div
-                                    class="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-gray-800 border border-gray-700 text-[10px] text-gray-300 rounded-xl shadow-2xl z-[60] leading-relaxed">
-                                    <strong class="text-white block mb-1">Guide:</strong>
-                                    <span x-text="preset.step06_guide || 'Define how the camera moves around the product to create dynamic, professional video shots.'"></span>
+                                    <span x-text="preset.step06_label || 'Video camera movement'"></span></label>
+                                <div class="cgi-tip-anchor cgi-tip-anchor--left shrink-0">
+                                    <span class="cursor-help text-gray-500 hover:text-blue-400 transition-colors inline-flex" tabindex="0" role="button" aria-label="Help">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </span>
+                                    <div class="cgi-step-tip">
+                                        <strong class="text-white block mb-1">What this means:</strong>
+                                        <span x-text="preset.step06_guide || 'Only for video ads — how the camera should move (slow zoom, gentle pan, etc.). For a still poster, a soft slow zoom works well.'"></span>
+                                    </div>
                                 </div>
                             </div>
                             <x-cgi-text-field
@@ -1113,19 +1126,20 @@
                     x-init="$nextTick(() => { const b = document.getElementById('cgi_business_type')?.value; if (b) business = b; })"
                     @cgi-business-changed.window="business = $event.detail.business; comp = '';"
                     @cgi-autofill-data.window="comp = $event.detail.composition || $event.detail.layout || $event.detail.position || comp">
-                        <div class="flex items-center gap-2 mb-2 relative group w-fit">
+                        <div class="flex items-center gap-2 mb-2">
                             <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">07.
-                                <span x-text="preset.step07_label || 'Product Positioning'"></span></label>
-                            <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <div
-                                class="absolute left-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-gray-800 border border-gray-700 text-[10px] text-gray-300 rounded-xl shadow-2xl z-[60] leading-relaxed">
-                                <strong class="text-white block mb-1">Guide:</strong>
-                                <span x-text="preset.step07_guide || 'Select where your product sits in the frame. Framing to the side helps leave room for text or graphics.'"></span>
+                                <span x-text="preset.step07_label || 'Where product sits on poster'"></span></label>
+                            <div class="cgi-tip-anchor cgi-tip-anchor--left shrink-0">
+                                <span class="cursor-help text-gray-500 hover:text-blue-400 transition-colors inline-flex" tabindex="0" role="button" aria-label="Help">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </span>
+                                <div class="cgi-step-tip">
+                                    <strong class="text-white block mb-1">What this means:</strong>
+                                    <span x-text="preset.step07_guide || 'Where your product photo appears on the poster — usually bottom-left or bottom-right so the top has space for your marketing headline.'"></span>
+                                </div>
                             </div>
                         </div>
 
@@ -1211,19 +1225,20 @@
                     x-init="$nextTick(() => { const b = document.getElementById('cgi_business_type')?.value; if (b) business = b; })"
                     @cgi-business-changed.window="business = $event.detail.business; light = '';"
                     @cgi-autofill-data.window="light = $event.detail.lighting_style || $event.detail.lighting || $event.detail.light || light">
-                        <div class="flex items-center gap-2 mb-2 relative group w-fit">
+                        <div class="flex items-center gap-2 mb-2">
                             <label class="block text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase">08.
-                                <span x-text="preset.step08_label || 'Lighting & Color preference.'"></span></label>
-                            <div class="cursor-help text-gray-500 hover:text-blue-400 transition-colors">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <div
-                                class="absolute left-0 md:left-auto md:right-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-gray-800 border border-gray-700 text-[10px] text-gray-300 rounded-xl shadow-2xl z-[60] leading-relaxed">
-                                <strong class="text-white block mb-1">Guide:</strong>
-                                <span x-text="preset.step08_guide || 'Pick a lighting style to set the overall mood, contrast, and visual color palette of your scene.'"></span>
+                                <span x-text="preset.step08_label || 'Light mood & colors'"></span></label>
+                            <div class="cgi-tip-anchor shrink-0">
+                                <span class="cursor-help text-gray-500 hover:text-blue-400 transition-colors inline-flex" tabindex="0" role="button" aria-label="Help">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </span>
+                                <div class="cgi-step-tip">
+                                    <strong class="text-white block mb-1">What this means:</strong>
+                                    <span x-text="preset.step08_guide || 'The feeling of light in your poster — warm and cozy, bright daylight, dark dramatic night, etc. Describe mood and glow from your product only.'"></span>
+                                </div>
                             </div>
                         </div>
 
@@ -1232,8 +1247,10 @@
                             model="light"
                             required
                             class="mb-2.5"
-                            x-bind:placeholder="preset.step08_placeholder || 'Type custom lighting or select below...'"
+                            x-bind:placeholder="preset.step08_placeholder || 'E.g. Deep cinematic darkness, soft ambient rim lighting, radiant hero product.'"
                         />
+
+                        <p x-show="preset.step08_example" x-cloak class="mt-1.5 mb-2 text-[9px] text-gray-500 italic leading-relaxed" x-text="preset.step08_example"></p>
 
                         <div x-show="lightingChips.length > 0" class="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-2">
                             <template x-for="chip in lightingChips" :key="chip.value">
@@ -1247,74 +1264,74 @@
                         </div>
 
                         <div x-show="lightingChips.length === 0" class="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                            <div @click="light = 'Warm white glow, cozy 3000K warm light spilling naturally from the product'"
-                                :class="light.includes('Warm white') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                            <div @click="light = 'Warm amber wash, soft natural fill, radiant hero product.'"
+                                :class="light.includes('Warm amber') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
                                 class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
                                 <span class="text-sm block mb-0.5">🔥</span>
                                 <h4 class="text-[8px] font-bold uppercase tracking-wider">Warm White</h4>
                             </div>
-                            <div @click="light = 'Natural daylight white, crisp 6500K cool white illumination'"
-                                :class="light.includes('daylight') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                            <div @click="light = 'Cool daylight clarity, crisp clean contrast, luminous hero product.'"
+                                :class="light.includes('Cool daylight') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
                                 class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
                                 <span class="text-sm block mb-0.5">☀️</span>
                                 <h4 class="text-[8px] font-bold uppercase tracking-wider">Daylight</h4>
                             </div>
-                            <div @click="light = 'Bright and uniform illumination filling the whole space evenly'"
-                                :class="light.includes('uniform') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                            <div @click="light = 'Bright even illumination, shadowless clarity, fully visible hero product.'"
+                                :class="light.includes('shadowless') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
                                 class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
                                 <span class="text-sm block mb-0.5">🔆</span>
                                 <h4 class="text-[8px] font-bold uppercase tracking-wider">Uniform</h4>
                             </div>
-                            <div @click="light = 'Soft ambient indoor glow, gentle relaxing mood lighting'"
-                                :class="light.includes('ambient') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                            <div @click="light = 'Soft ambient interior glow, gentle relaxing mood, radiant hero product.'"
+                                :class="light.includes('Soft ambient') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
                                 class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
                                 <span class="text-sm block mb-0.5">💡</span>
                                 <h4 class="text-[8px] font-bold uppercase tracking-wider">Soft Ambient</h4>
                             </div>
-                            <div @click="light = 'Golden evening warmth, sunset ambiance glow'"
-                                :class="light.includes('evening') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                            <div @click="light = 'Golden hour warmth, sunset rim light, beautifully radiant hero product.'"
+                                :class="light.includes('Golden hour') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
                                 class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
                                 <span class="text-sm block mb-0.5">🌅</span>
                                 <h4 class="text-[8px] font-bold uppercase tracking-wider">Evening</h4>
                             </div>
-                            <div @click="light = 'Festive warm string light glow, cozy fairy lights ambiance'"
-                                :class="light.includes('Festive') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                            <div @click="light = 'Warm festive sparkle, cozy celebration glow, radiant hero product.'"
+                                :class="light.includes('festive') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
                                 class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
                                 <span class="text-sm block mb-0.5">✨</span>
                                 <h4 class="text-[8px] font-bold uppercase tracking-wider">Festive</h4>
                             </div>
-                            <div @click="light = 'Clean white minimal studio lighting, bright and pure'"
-                                :class="light.includes('minimal') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                            <div @click="light = 'Clean minimal studio light, bright neutral tone, sharp hero product.'"
+                                :class="light.includes('minimal studio') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
                                 class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
                                 <span class="text-sm block mb-0.5">⚪</span>
                                 <h4 class="text-[8px] font-bold uppercase tracking-wider">Clean</h4>
                             </div>
-                            <div @click="light = 'Dark night scene illuminated only by the product glow'"
-                                :class="light.includes('night scene') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                            <div @click="light = 'Deep cinematic darkness, soft ambient rim lighting, radiant hero product.'"
+                                :class="light.includes('cinematic darkness') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
                                 class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
                                 <span class="text-sm block mb-0.5">🌙</span>
                                 <h4 class="text-[8px] font-bold uppercase tracking-wider">Night Glow</h4>
                             </div>
-                            <div @click="light = 'Warm intimate dining ambiance lighting over the table'"
-                                :class="light.includes('dining ambiance') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                            <div @click="light = 'Golden dining ambience, warm overhead wash, softly radiant hero product.'"
+                                :class="light.includes('dining ambience') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
                                 class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
                                 <span class="text-sm block mb-0.5">🍽️</span>
                                 <h4 class="text-[8px] font-bold uppercase tracking-wider">Dining</h4>
                             </div>
-                            <div @click="light = 'Modern elegant accent lighting, sleek and stylish'"
-                                :class="light.includes('accent') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                            <div @click="light = 'Focused accent beam, dramatic contrast, spotlit hero product.'"
+                                :class="light.includes('accent beam') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
                                 class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
                                 <span class="text-sm block mb-0.5">💎</span>
                                 <h4 class="text-[8px] font-bold uppercase tracking-wider">Accent</h4>
                             </div>
-                            <div @click="light = 'Bright clean commercial space lighting, professional and even'"
-                                :class="light.includes('commercial') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                            <div @click="light = 'Clean commercial brightness, professional neutral tone, sharp hero product.'"
+                                :class="light.includes('commercial brightness') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
                                 class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
                                 <span class="text-sm block mb-0.5">🏬</span>
                                 <h4 class="text-[8px] font-bold uppercase tracking-wider">Commercial</h4>
                             </div>
-                            <div @click="light = 'Cozy warm home ambiance, inviting and relaxing light'"
-                                :class="light.includes('home ambiance') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
+                            <div @click="light = 'Cozy warm interior glow, soft wall reflections, inviting hero product.'"
+                                :class="light.includes('Cozy warm') ? 'border-blue-500 bg-blue-600/20 text-white' : 'border-gray-700/80 bg-black/30 text-gray-400'"
                                 class="p-1 border rounded-lg cursor-pointer hover:border-blue-500/50 transition-all text-center">
                                 <span class="text-sm block mb-0.5">🏡</span>
                                 <h4 class="text-[8px] font-bold uppercase tracking-wider">Cozy Home</h4>
@@ -1442,6 +1459,52 @@
 
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #3b82f6;
+        }
+
+        .cgi-tip-anchor {
+            position: relative;
+            display: inline-flex;
+        }
+
+        .cgi-step-tip {
+            display: none;
+            position: absolute;
+            z-index: 80;
+            pointer-events: none;
+            width: min(18rem, calc(100vw - 2rem));
+            padding: 0.75rem;
+            background: rgb(31 41 55);
+            border: 1px solid rgb(55 65 81);
+            border-radius: 0.75rem;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+            font-size: 10px;
+            line-height: 1.625;
+            color: rgb(209 213 219);
+            top: 50%;
+            left: calc(100% + 0.5rem);
+            transform: translateY(-50%);
+        }
+
+        .cgi-tip-anchor:hover .cgi-step-tip,
+        .cgi-tip-anchor:focus-within .cgi-step-tip {
+            display: block;
+        }
+
+        @media (min-width: 768px) {
+            .cgi-tip-anchor--left .cgi-step-tip {
+                left: auto;
+                right: calc(100% + 0.5rem);
+            }
+        }
+
+        @media (max-width: 767px) {
+            .cgi-step-tip {
+                top: auto;
+                bottom: calc(100% + 0.375rem);
+                left: auto;
+                right: 0;
+                transform: none;
+            }
         }
     </style>
 </x-app-layout>

@@ -1005,8 +1005,7 @@
                                         <template x-teleport="body">
 
                                             <div x-show="openModal"
-                                                class="fixed inset-0 z-[999] flex justify-center p-4 sm:p-6 bg-black/95 backdrop-blur-md"
-                                                :class="['image','video','audio'].includes(openModal) ? 'items-start overflow-y-auto py-6 sm:py-10' : 'items-center'"
+                                                class="fixed inset-0 z-[999] flex items-center justify-center p-3 sm:p-5 bg-black/95 backdrop-blur-md overflow-hidden"
                                                 x-cloak>
 
                                                 {{-- ========================================================
@@ -1056,6 +1055,14 @@
                                                                 ? $gen->product_image
                                                                 : asset('storage/' . $gen->product_image))
                                                             : null;
+                                                        $detailStep01 = $detailBusiness['step01_label'] ?? 'Your product name';
+                                                        $detailStep02 = $detailBusiness['step02_label'] ?? 'Your product photo';
+                                                        $detailStep03 = $detailBusiness['step03_label'] ?? 'Marketing headline';
+                                                        $detailStep04 = $detailBusiness['step04_label'] ?? 'How it is used in real life';
+                                                        $detailStep05 = $detailBusiness['step05_label'] ?? 'Which room or place';
+                                                        $detailStep06 = $detailBusiness['step06_label'] ?? 'Video camera movement';
+                                                        $detailStep07 = $detailBusiness['step07_label'] ?? 'Where product sits on poster';
+                                                        $detailStep08 = $detailBusiness['step08_label'] ?? 'Light mood & colors';
                                                     @endphp
 
                                                     <div class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
@@ -1072,12 +1079,12 @@
 
                                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                                             <div>
-                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">01. Product Identity</p>
+                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">01. {{ $detailStep01 }}</p>
                                                                 <p class="text-sm font-black text-white">{{ $gen->product_name }}</p>
                                                             </div>
 
                                                             <div>
-                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-2">02. Product Reference</p>
+                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-2">02. {{ $detailStep02 }}</p>
                                                                 @if($detailProductImageUrl)
                                                                     <button type="button" @click="showProductReferenceImage = true"
                                                                        class="inline-block group rounded-xl overflow-hidden border border-white/10 bg-black/50 hover:border-blue-500/40 transition-all max-w-[200px] text-left">
@@ -1092,30 +1099,30 @@
                                                         </div>
 
                                                         <div>
-                                                            <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">03. Marketing Angle</p>
+                                                            <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">03. {{ $detailStep03 }}</p>
                                                             <p class="text-xs font-bold text-gray-300 italic leading-relaxed">{{ $gen->marketing_angle }}</p>
                                                         </div>
 
                                                         <div>
-                                                            <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">04. Product Usage</p>
+                                                            <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">04. {{ $detailStep04 }}</p>
                                                             <p class="text-xs font-bold text-gray-300 leading-relaxed bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2.5">{{ $gen->visual_prop }}</p>
                                                         </div>
 
                                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                                             <div>
-                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">05. Scene Background</p>
+                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">05. {{ $detailStep05 }}</p>
                                                                 <p class="text-xs font-bold text-gray-300 leading-relaxed">{{ $gen->atmosphere }}</p>
                                                             </div>
                                                             <div>
-                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">06. Camera Style</p>
+                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">06. {{ $detailStep06 }}</p>
                                                                 <p class="text-xs font-bold text-gray-300 leading-relaxed">{{ $gen->camera_motion }}</p>
                                                             </div>
                                                             <div>
-                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">07. Product Positioning</p>
+                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">07. {{ $detailStep07 }}</p>
                                                                 <p class="text-xs font-bold text-gray-300 leading-relaxed">{{ $gen->composition }}</p>
                                                             </div>
                                                             <div>
-                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">08. Lighting &amp; Color</p>
+                                                                <p class="text-[9px] font-black text-blue-500/80 uppercase tracking-[0.2em] mb-1">08. {{ $detailStep08 }}</p>
                                                                 <p class="text-xs font-bold text-gray-300 leading-relaxed">{{ $gen->lighting_style }}</p>
                                                             </div>
                                                         </div>
@@ -1145,10 +1152,10 @@
 
 
                                                 <div x-show="['image','video','audio'].includes(openModal)"
-                                                    class="bg-[#0a0a0a] border border-white/10 w-full max-w-3xl rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 my-auto">
+                                                    class="cgi-prompt-modal bg-[#0a0a0a] border border-white/10 w-[min(96vw,1400px)] max-w-none rounded-xl shadow-2xl overflow-visible animate-in fade-in zoom-in duration-200">
 
                                                     <div
-                                                        class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                                                        class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02] rounded-t-xl">
 
                                                         <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]"
                                                             x-text="openModal.toUpperCase() + ' DIRECTIVE DEFINITION'"></h3>
@@ -1158,12 +1165,12 @@
                                                     </div>
 
 
-                                                    <div class="p-6 sm:p-8">
+                                                    <div class="p-5 sm:p-7 overflow-visible">
                                                         <div x-show="!isEditing"
-                                                            class="bg-black p-5 sm:p-6 rounded-xl border border-white/5 font-mono text-xs sm:text-sm text-gray-300 whitespace-pre-wrap break-words leading-relaxed shadow-inner"
+                                                            class="bg-black p-5 sm:p-6 rounded-xl border border-white/5 font-mono text-[13px] text-gray-200 whitespace-pre-wrap break-words leading-[1.65] shadow-inner overflow-visible"
                                                             x-text="openModal==='image' ? liveImagePrompt : (openModal==='video' ? liveVideoPrompt : liveAudioPrompt)">
                                                         </div>
-                                                        <div x-show="isEditing">
+                                                        <div x-show="isEditing" class="overflow-visible">
 
                                                             <template x-if="openModal==='image'"><textarea
                                                                     x-model="inputImage"
@@ -1171,7 +1178,7 @@
                                                                     rows="1"
                                                                     @input="window.cgiGrowField($refs.promptEditImage)"
                                                                     x-init="$nextTick(() => window.cgiGrowField($refs.promptEditImage))"
-                                                                    class="w-full min-h-[10rem] bg-black border border-white/10 rounded-xl p-5 text-white font-mono text-xs sm:text-sm focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none overflow-hidden whitespace-pre-wrap break-words leading-relaxed"></textarea></template>
+                                                                    class="w-full min-h-[8rem] bg-black border border-white/10 rounded-xl p-5 text-white font-mono text-[13px] focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none overflow-visible whitespace-pre-wrap break-words leading-[1.65]"></textarea></template>
 
                                                             <template x-if="openModal==='video'"><textarea
                                                                     x-model="inputVideo"
@@ -1179,7 +1186,7 @@
                                                                     rows="1"
                                                                     @input="window.cgiGrowField($refs.promptEditVideo)"
                                                                     x-init="$nextTick(() => window.cgiGrowField($refs.promptEditVideo))"
-                                                                    class="w-full min-h-[10rem] bg-black border border-white/10 rounded-xl p-5 text-white font-mono text-xs sm:text-sm focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none overflow-hidden whitespace-pre-wrap break-words leading-relaxed"></textarea></template>
+                                                                    class="w-full min-h-[8rem] bg-black border border-white/10 rounded-xl p-5 text-white font-mono text-[13px] focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none overflow-visible whitespace-pre-wrap break-words leading-[1.65]"></textarea></template>
 
                                                             <template x-if="openModal==='audio'"><textarea
                                                                     x-model="inputAudio"
@@ -1187,7 +1194,7 @@
                                                                     rows="1"
                                                                     @input="window.cgiGrowField($refs.promptEditAudio)"
                                                                     x-init="$nextTick(() => window.cgiGrowField($refs.promptEditAudio))"
-                                                                    class="w-full min-h-[10rem] bg-black border border-white/10 rounded-xl p-5 text-white font-mono text-xs sm:text-sm focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none overflow-hidden whitespace-pre-wrap break-words leading-relaxed"></textarea></template>
+                                                                    class="w-full min-h-[8rem] bg-black border border-white/10 rounded-xl p-5 text-white font-mono text-[13px] focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none overflow-visible whitespace-pre-wrap break-words leading-[1.65]"></textarea></template>
 
 
                                                         </div>
@@ -1195,7 +1202,7 @@
 
 
                                                     <div
-                                                        class="px-8 py-5 border-t border-white/5 flex justify-end gap-3 bg-white/[0.01]">
+                                                        class="px-6 sm:px-8 py-4 border-t border-white/5 flex justify-end gap-3 bg-white/[0.01] rounded-b-xl">
                                                         <template
                                                             x-if="(openModal==='image' && !imageUrl) || ( (openModal==='video' || openModal==='audio') && !videoUrl )">
                                                             <div class="flex gap-2">
@@ -2006,6 +2013,20 @@
 
         [x-cloak] {
             display: none !important;
+        }
+
+        .cgi-prompt-modal,
+        .cgi-prompt-modal .overflow-visible {
+            overflow: visible !important;
+        }
+
+        .cgi-prompt-modal textarea {
+            overflow: hidden !important;
+            scrollbar-width: none;
+        }
+
+        .cgi-prompt-modal textarea::-webkit-scrollbar {
+            display: none;
         }
 
         body {

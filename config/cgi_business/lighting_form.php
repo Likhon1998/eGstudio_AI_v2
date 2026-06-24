@@ -1,12 +1,17 @@
 <?php
 
-return [
-    'form_banner' => 'Follow the chain: Step 01 product type → Step 04 how it installs → Step 05 which room → Step 07 where the hero cutout sits in the frame. Lights mount in ceiling/wall; switches mount on wall plates with room lights ON.',
+$step08Hero = 'hero product';
 
-    'step01_label' => 'What light or switch are you selling?',
-    'step01_guide' => 'Use the exact product type from your reference image. Bulbs and panels install in ceilings; switches mount on wall plates. Wrong type here causes AI to render the wrong product.',
-    'step01_placeholder' => 'E.g. 6A Modular 1-Way Switch, 18W LED Panel Light, Smart WiFi Touch Switch...',
-    'step01_example' => 'Switch example: "Modular 2-Way Staircase Switch" · Light example: "18W Slim LED Ceiling Panel Light"',
+return [
+    'form_banner' => 'Fill in order: name your product → add its photo → write your marketing headline → describe how it is used → pick the room → set layout & light mood. Each step builds the next.',
+
+    'step01_label' => 'Your product name',
+    'step01_guide' => 'Type the exact name of what you sell — the same item shown in your photo (Step 02). Scenario: you sell a ceiling panel, write "18W Slim LED Panel Light". For a switch, write "2-Way Staircase Switch". If this does not match the photo, the poster may show the wrong product.',
+    'step01_placeholder' => 'E.g. 18W LED Panel Light, 6A Wall Switch, Smart Touch Switch...',
+    'step01_example' => 'Light: "18W Ceiling Panel" · Switch: "Modular 2-Way Switch" · Use the name your customer would recognize.',
+
+    'step02_label' => 'Your product photo',
+    'step02_guide' => 'Choose or upload the real photo of the product for this poster. The AI will copy this exact item — shape, color, and branding — in the final image. Scenario: upload a clear photo of your panel on white background, or pick one you saved before from the library.',
 
     'product_suggestions' => [
         ['icon' => '💡', 'label' => 'LED Bulb', 'value' => '9W Energy-Saving LED Bulb E27', 'category' => 'lights'],
@@ -37,10 +42,10 @@ return [
         ['icon' => '🎛️', 'label' => 'Multi-Gang', 'value' => '4-Gang Modular Switch Plate', 'category' => 'switches'],
     ],
 
-    'step03_label' => 'Marketing headline text',
-    'step03_guide' => 'Short bold headline only — 1 to 3 selling points max. These appear as poster text, not long paragraphs.',
-    'step03_placeholder' => 'E.g. ENERGY SAVING · LONG LIFESPAN · MODERN DESIGN',
-    'step03_example' => 'Switch: "SAFE SWITCHING · FIRE RETARDANT BODY" · Light: "BRIGHT UNIFORM LIGHT · ENERGY SAVING"',
+    'step03_label' => 'Marketing headline',
+    'step03_guide' => 'The bold selling message on your advertisement — 2 to 3 short benefit phrases, not a long paragraph. Example: BRIGHT & UNIFORM · ENERGY SAVING · LONG LIFE. This headline sits in the poster layout (usually at the top). It is not printed on the product photo.',
+    'step03_placeholder' => 'E.g. BRIGHT UNIFORM LIGHT · ENERGY SAVING · MODERN DESIGN',
+    'step03_example' => 'Panel: BRIGHT UNIFORM LIGHT · ENERGY SAVING · Switch: SAFE SWITCHING · FIRE RETARDANT BODY',
 
     'marketing_chips' => [
         ['icon' => '⚡', 'label' => 'Energy Saving', 'value' => 'ENERGY SAVING PERFORMANCE', 'match' => 'ENERGY SAVING', 'category' => 'lights'],
@@ -62,39 +67,45 @@ return [
         'switches' => ['label' => 'Wall switches & controls', 'icon' => '🔘'],
     ],
 
-    'step04_example' => 'Pick install type below — Step 05 loads matching scene examples in the dropdown.',
+    'step04_dropdown_label' => 'Browse common examples (optional)',
+    'step04_helper' => 'Pick an example below, or type your own above — Step 05 will suggest matching rooms.',
+    'step04_example' => 'Pick how it is fitted from the list below — Step 05 will suggest matching rooms. Example: ceiling panel → office or kitchen; wall switch → bedroom with lights ON.',
 
-    'step05_label' => 'Scene setting',
-    'step05_guide' => 'Where Step 04 happens. Open the dropdown and use ↑ ↓ arrows + Enter, or type your own scene. Switches: wall plate visible with room lights ON.',
-    'step05_placeholder' => 'E.g. Retail store with spotlights on product display',
-    'step05_example' => 'Spotlight → gallery or showroom · Pendant → dining or kitchen · Switch → bedroom with wall plate and lights ON.',
-    'step05_suggestions_label' => 'Suggested scenes',
-    'step05_dropdown_placeholder' => 'Select suggested scene...',
+    'step05_label' => 'Which room or place',
+    'step05_guide' => 'The background scene for your poster — where your product is shown in real life. Pick from the dropdown after Step 04, or type your own. Scenario: if Step 04 is a ceiling panel in an office, choose "Office Space". For a switch, show the switch on the wall and the room lights glowing ON.',
+    'step05_placeholder' => 'E.g. Modern living room with warm ceiling light glowing',
+    'step05_example' => 'Panel → office or kitchen · Pendant → dining room · Switch → bedroom with switch beside door and lights ON.',
+    'step05_suggestions_label' => 'Suggested rooms & places',
+    'step05_dropdown_placeholder' => 'Choose a room or place...',
+    'step05_helper' => 'Fill in Step 04 first — matching room examples appear in the dropdown below.',
 
-    'step06_label' => 'Camera style (for video)',
-    'step06_guide' => 'How the camera moves in the final video ad. Static poster shots work with slow orbit or gentle push-in.',
-    'step06_placeholder' => 'E.g. Slow cinematic push-in toward the wall switch and glowing room...',
+    'step06_label' => 'Video camera movement',
+    'step06_guide' => 'Only used when you create a video ad later. Describe how the camera should move — slow zoom in, gentle pan left, etc. Scenario: "Slowly move closer to the wall switch while the room lights glow." For a still poster, a soft slow zoom works well.',
+    'step06_placeholder' => 'E.g. Slow gentle zoom toward the product and glowing room',
+    'step06_example' => 'Still poster: slow cinematic push-in · Video: smooth orbit around the product.',
 
-    'step07_label' => 'Product positioning',
-    'step07_guide' => 'Where the hero product cutout sits in the poster frame. Use left or right to leave space for headline text. Scene fills the background.',
-    'step07_placeholder' => 'E.g. Product on the right side. Space on left for text.',
+    'step07_label' => 'Where product sits on poster',
+    'step07_guide' => 'Where your product photo appears on the finished poster. Usually bottom-left or bottom-right so the top has space for your marketing headline. Example: product bottom-right, open area top-left for the headline.',
+    'step07_placeholder' => 'E.g. Product on the right side, space on the left for headline text',
+    'step07_example' => 'Most posters: product bottom-right or bottom-left · Headline sits at the top.',
 
-    'step08_label' => 'Scene lighting & color mood',
-    'step08_guide' => 'Color temperature and glow from the light product in the scene — warm home, cool office, night demo, dimmed dining, etc. For switches, show the warm/cool glow of the lights they control when ON.',
-    'step08_placeholder' => 'E.g. Warm 3000K glow from ceiling LED, cozy home evening mood...',
+    'step08_label' => 'Light mood & colors',
+    'step08_guide' => 'The feeling of the lighting in your poster — warm and cozy, bright daylight, dark dramatic night, soft golden evening, etc. Describe mood and glow from your hero product only, not a different fixture. Scenario: "Deep dark room, soft glow around the product, warm amber light."',
+    'step08_placeholder' => 'E.g. Deep cinematic darkness, soft ambient rim lighting, radiant hero product.',
+    'step08_example' => 'Pick a mood chip or write your own — warm home, cool office, night demo, golden evening.',
 
     'lighting_style_chips' => [
-        ['icon' => '🔥', 'label' => 'Warm White', 'value' => 'Warm white 3000K glow from ceiling light or bulb, cozy residential indoor mood'],
-        ['icon' => '☀️', 'label' => 'Cool Daylight', 'value' => 'Cool daylight 6500K from panel or tube light, crisp bright office mood'],
-        ['icon' => '⚪', 'label' => 'Neutral White', 'value' => 'Neutral 4000K balanced white from LED fixture, clean kitchen or washroom mood'],
-        ['icon' => '🔆', 'label' => 'Bright Uniform', 'value' => 'Bright even LED panel or downlight illumination filling the room with no dark corners'],
-        ['icon' => '🌙', 'label' => 'Night Demo', 'value' => 'Dark room at night with LED product as the only light source, realistic shadows and spill'],
-        ['icon' => '🌗', 'label' => 'Dimmed Warm', 'value' => 'Soft dimmed warm light from dimmer-controlled pendant or chandelier, romantic dining mood'],
-        ['icon' => '🏬', 'label' => 'Commercial', 'value' => 'Clean bright commercial LED lighting, professional neutral white for shop or office'],
-        ['icon' => '✨', 'label' => 'Accent Beam', 'value' => 'Focused accent beam from spotlight or downlight highlighting product area with soft falloff'],
-        ['icon' => '🏡', 'label' => 'Cozy Home', 'value' => 'Inviting warm home glow from ceiling or wall light, soft reflections on walls and furniture'],
-        ['icon' => '🍽️', 'label' => 'Dining Glow', 'value' => 'Warm pendant or chandelier light over dining table, golden comfortable mealtime ambience'],
-        ['icon' => '🌦️', 'label' => 'Outdoor Flood', 'value' => 'Cool white floodlight or street light beam washing outdoor area at night, sharp visibility'],
-        ['icon' => '🌅', 'label' => 'Golden Evening', 'value' => 'Golden evening warmth from interior LED mixing with soft sunset tone through windows'],
+        ['icon' => '🔥', 'label' => 'Warm White', 'value' => 'Warm amber wash, soft natural fill, radiant '.$step08Hero.'.'],
+        ['icon' => '☀️', 'label' => 'Cool Daylight', 'value' => 'Cool daylight clarity, crisp clean contrast, luminous '.$step08Hero.'.'],
+        ['icon' => '⚪', 'label' => 'Neutral White', 'value' => 'Balanced neutral white, even soft exposure, natural '.$step08Hero.' glow.'],
+        ['icon' => '🔆', 'label' => 'Bright Uniform', 'value' => 'Bright even illumination, shadowless clarity, fully visible '.$step08Hero.'.'],
+        ['icon' => '🌙', 'label' => 'Night Demo', 'value' => 'Deep cinematic darkness, soft ambient rim lighting, radiant '.$step08Hero.'.'],
+        ['icon' => '🌗', 'label' => 'Dimmed Warm', 'value' => 'Intimate dimmed warmth, gentle soft falloff, glowing '.$step08Hero.'.'],
+        ['icon' => '🏬', 'label' => 'Commercial', 'value' => 'Clean commercial brightness, professional neutral tone, sharp '.$step08Hero.'.'],
+        ['icon' => '✨', 'label' => 'Accent Beam', 'value' => 'Focused accent beam, dramatic contrast, spotlit '.$step08Hero.'.'],
+        ['icon' => '🏡', 'label' => 'Cozy Home', 'value' => 'Cozy warm interior glow, soft wall reflections, inviting '.$step08Hero.'.'],
+        ['icon' => '🍽️', 'label' => 'Dining Glow', 'value' => 'Golden dining ambience, warm overhead wash, softly radiant '.$step08Hero.'.'],
+        ['icon' => '🌦️', 'label' => 'Outdoor Night', 'value' => 'Cool night atmosphere, directional beam through darkness, luminous '.$step08Hero.'.'],
+        ['icon' => '🌅', 'label' => 'Golden Evening', 'value' => 'Golden hour warmth, sunset rim light, beautifully radiant '.$step08Hero.'.'],
     ],
 ];
